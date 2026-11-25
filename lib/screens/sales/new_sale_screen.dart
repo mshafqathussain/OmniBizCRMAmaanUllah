@@ -450,20 +450,64 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
   }
 
   Widget _section(String title, Widget child) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: const TextStyle(
-              fontSize: 17, fontWeight: FontWeight.bold,
-            )),
-            const SizedBox(height: 12),
-            child,
-          ],
-        ),
+    final icons = <String, IconData>{
+      'Customer': Icons.person_outline,
+      'Add Products': Icons.qr_code_scanner,
+      'Sale Cart': Icons.shopping_cart_outlined,
+      'Bill Details': Icons.receipt_long_outlined,
+      'Bill Summary': Icons.account_balance_wallet_outlined,
+    };
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: const Color(0xFF172337),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF34445D)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x22000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: const Color(0x2241D6B5),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  icons[title] ?? Icons.dashboard_outlined,
+                  color: const Color(0xFF41D6B5),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 15),
+          child,
+        ],
       ),
     );
   }
@@ -473,11 +517,27 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       onChanged: (_) => setState(() {}),
+      style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: label,
         prefixText: 'Rs ',
-        border: const OutlineInputBorder(),
+        prefixStyle: const TextStyle(color: Color(0xFF41D6B5)),
+        labelStyle: const TextStyle(color: Colors.white70),
+        filled: true,
+        fillColor: const Color(0xFF101B2C),
         isDense: true,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF34445D)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF34445D)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF41D6B5), width: 1.5),
+        ),
       ),
     );
   }
@@ -487,9 +547,16 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('New Sale')),
+      backgroundColor: const Color(0xFF0B1220),
+      appBar: AppBar(
+        title: const Text('New Sale', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFF111C2E),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: false,
+      ),
       body: ListView(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         children: [
           Container(
             width: double.infinity,
@@ -536,8 +603,24 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
                     icon: const Icon(Icons.person_add),
                     tooltip: 'Add Customer',
                   ),
-                  border: const OutlineInputBorder(),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF34445D)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF34445D)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF41D6B5), width: 1.5),
+                  ),
+                  filled: true,
+                  fillColor: const Color(0xFF101B2C),
+                  labelStyle: const TextStyle(color: Colors.white70),
+                  prefixIconColor: const Color(0xFF41D6B5),
                 ),
+                style: const TextStyle(color: Colors.white),
               ),
               if (selectedCustomer != null)
                 ListTile(
@@ -622,20 +705,35 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
               const SizedBox(height: 10),
               ...filteredSaleProducts.take(12).map((product) {
                 final stock = (product['quantity'] as num).toDouble();
-                return ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(product['name'].toString()),
-                  subtitle: Text(
-                    'SKU: ${product['sku'] ?? '-'}  •  Stock: $stock ${product['unit'] ?? 'pcs'}',
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF101B2C),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF34445D)),
                   ),
-                  trailing: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(_rs((product['sale_price'] as num).toDouble())),
-                      const Icon(Icons.add_circle_outline, size: 12),
-                    ],
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                    title: Text(
+                      product['name'].toString(),
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      'SKU: ${product['sku'] ?? '-'}  •  Stock: $stock ${product['unit'] ?? 'pcs'}',
+                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                    trailing: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _rs((product['sale_price'] as num).toDouble()),
+                          style: const TextStyle(color: Color(0xFF41D6B5), fontWeight: FontWeight.bold),
+                        ),
+                        const Icon(Icons.add_circle_outline, size: 18, color: Color(0xFF41D6B5)),
+                      ],
+                    ),
+                    onTap: () => _addProduct(product),
                   ),
-                  onTap: () => _addProduct(product),
                 );
               }),
               OutlinedButton.icon(
@@ -654,28 +752,40 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
                     final item = entry.value;
                     final qty = item['quantity'] as double;
                     final price = item['price'] as double;
-                    return ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(item['productName'].toString()),
-                      subtitle: Text(
-                        '${_rs(price)} × ${qty.toString()} ${item['unit']} = ${_rs(price * qty)}',
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF101B2C),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF34445D)),
                       ),
-                      leading: IconButton(
-                        onPressed: () => _changeQuantity(i, -1),
-                        icon: const Icon(Icons.remove_circle_outline),
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            onPressed: () => _changeQuantity(i, 1),
-                            icon: const Icon(Icons.add_circle_outline, size: 12),
-                          ),
-                          IconButton(
-                            onPressed: () => setState(() => cart.removeAt(i)),
-                            icon: const Icon(Icons.delete_outline, color: Colors.red),
-                          ),
-                        ],
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                        title: Text(
+                          item['productName'].toString(),
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: Text(
+                          '${_rs(price)} × ${qty.toString()} ${item['unit']} = ${_rs(price * qty)}',
+                          style: const TextStyle(color: Color(0xFF41D6B5)),
+                        ),
+                        leading: IconButton(
+                          onPressed: () => _changeQuantity(i, -1),
+                          icon: const Icon(Icons.remove_circle_outline, color: Colors.white70),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              onPressed: () => _changeQuantity(i, 1),
+                              icon: const Icon(Icons.add_circle_outline, color: Color(0xFF41D6B5)),
+                            ),
+                            IconButton(
+                              onPressed: () => setState(() => cart.removeAt(i)),
+                              icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   }).toList(),
@@ -713,18 +823,42 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
               const SizedBox(height: 10),
               TextField(
                 controller: _reference,
-                decoration: const InputDecoration(
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
                   labelText: 'Reference / Order Number (optional)',
-                  border: OutlineInputBorder(),
+                  labelStyle: const TextStyle(color: Colors.white70),
+                  filled: true,
+                  fillColor: const Color(0xFF101B2C),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF34445D)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF41D6B5), width: 1.5),
+                  ),
                 ),
               ),
               const SizedBox(height: 10),
               TextField(
                 controller: _notes,
                 maxLines: 2,
-                decoration: const InputDecoration(
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
                   labelText: 'Notes (optional)',
-                  border: OutlineInputBorder(),
+                  labelStyle: const TextStyle(color: Colors.white70),
+                  filled: true,
+                  fillColor: const Color(0xFF101B2C),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF34445D)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF41D6B5), width: 1.5),
+                  ),
                 ),
               ),
             ],
@@ -743,13 +877,31 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
           )),
 
           SizedBox(
-            height: 52,
+            height: 54,
+            width: double.infinity,
             child: FilledButton.icon(
               onPressed: saving ? null : _saveSale,
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF41D6B5),
+                foregroundColor: const Color(0xFF0B1220),
+                disabledBackgroundColor: const Color(0xFF34445D),
+                disabledForegroundColor: Colors.white70,
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               icon: saving
                   ? const SizedBox(
                       height: 18, width: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Color(0xFF0B1220),
+                      ),
                     )
                   : const Icon(Icons.receipt_long),
               label: Text(saving ? 'Generating Bill...' : 'Generate Bill'),
@@ -1017,17 +1169,28 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
   }
 
   Widget _summaryRow(String label, double amount, {bool bold = false}) {
+    final highlight = label == 'Grand Total' || label == 'Remaining';
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: EdgeInsets.symmetric(vertical: highlight ? 9 : 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(
-            fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-          )),
-          Text(_rs(amount), style: TextStyle(
-            fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-          )),
+          Text(
+            label,
+            style: TextStyle(
+              color: highlight ? const Color(0xFF41D6B5) : Colors.white70,
+              fontSize: highlight ? 15 : 13,
+              fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+          Text(
+            _rs(amount),
+            style: TextStyle(
+              color: highlight ? const Color(0xFF41D6B5) : Colors.white,
+              fontSize: highlight ? 17 : 13,
+              fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
         ],
       ),
     );
