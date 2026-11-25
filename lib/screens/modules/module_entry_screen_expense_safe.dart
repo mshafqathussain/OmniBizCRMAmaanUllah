@@ -1,0 +1,605 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import '../../database/app_database.dart';
+
+class ModuleEntryScreen extends StatefulWidget {
+  final String moduleName;
+  final IconData icon;
+
+  const ModuleEntryScreen({
+    super.key,
+    required this.moduleName,
+    required this.icon,
+  });
+
+  @override
+  State<ModuleEntryScreen> createState() => _ModuleEntryScreenState();
+}
+
+class _ModuleEntryScreenState extends State<ModuleEntryScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final Map<String, TextEditingController> controllers = {};
+
+  int? editingId;
+  String status = 'Saved';
+  bool loading = false;
+  List<Map<String, dynamic>> records = [];
+  String recordSearch = '';
+
+  List<Map<String, dynamic>> get filteredRecords {
+    final q = recordSearch.trim().toLowerCase();
+    if (q.isEmpty) return records;
+    return records.where((record) {
+      return (record['title'] ?? '').toString().toLowerCase().contains(q) ||
+          (record['form_data'] ?? '').toString().toLowerCase().contains(q) ||
+          (record['status'] ?? '').toString().toLowerCase().contains(q);
+    }).toList();
+  }
+
+  String recordSummary(Map<String, dynamic> record) {
+    try {
+      final data = Map<String, dynamic>.from(
+        jsonDecode(record['form_data']?.toString() ?? '{}') as Map,
+      );
+      final details = data.entries
+          .where((e) => e.value.toString().trim().isNotEmpty)
+          .take(3)
+          .map((e) => '${e.key}: ${e.value}')
+          .join('  •  ');
+      final amount = (record['amount'] as num?)?.toDouble() ?? 0;
+      final status = record['status']?.toString() ?? 'Saved';
+      return 'Rs. ${amount.toStringAsFixed(2)}  •  $status'
+          '${details.isEmpty ? '' : '\\n$details'}';
+    } catch (_) {
+      return record['status']?.toString() ?? 'Saved';
+    }
+  }
+
+  Future<void> pickDate(String field) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null && mounted) {
+      controllers[field]?.text =
+          '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+    }
+  }
+
+  static const Map<String, List<String>> moduleFields = {
+    'Orders & Quotations': [
+      'Order / Quotation Number', 'Customer Name', 'Mobile Number',
+      'Order Date', 'Delivery Date', 'Products / Details',
+      'Quantity', 'Total Amount', 'Advance Payment', 'Notes'
+    ],
+    'Customers': [
+      'Customer Name', 'Mobile Number', 'WhatsApp Number',
+      'Email', 'Business Name', 'Address', 'Opening Balance', 'Notes'
+    ],
+    'Khata': [
+      'Account Title', 'Customer / Supplier Name', 'Mobile Number',
+      'Transaction Date', 'Previous Balance', 'Jama Amount',
+      'Udhar Amount', 'Description', 'Notes'
+    ],
+    'Baqaya Udhaar': [
+      'Customer Name', 'Mobile Number', 'Invoice Number',
+      'Total Amount', 'Received Amount', 'Remaining Amount',
+      'Payment Date', 'Notes'
+    ],
+    'Jama Raqam & Udhar Dein': [
+      'Person / Account Name', 'Mobile Number', 'Transaction Type',
+      'Transaction Date', 'Amount', 'Payment Method', 'Description'
+    ],
+    'Expenses': [
+      'Expense Title', 'Category', 'Expense Date', 'Amount',
+      'Payment Method', 'Paid To', 'Reference Number', 'Description'
+    ],
+    'Inventory & In Stock': [
+      'Product Name', 'SKU / Barcode', 'Category', 'Quantity',
+      'Unit', 'Warehouse', 'Minimum Stock', 'Notes'
+    ],
+    'Warehouse': [
+      'Warehouse Name', 'Warehouse Code', 'Manager Name',
+      'Mobile Number', 'Address', 'Capacity', 'Notes'
+    ],
+    'Stock Transfer & Adjustment': [
+      'Product Name', 'SKU / Barcode', 'From Warehouse',
+      'To Warehouse', 'Transfer / Adjustment Type', 'Quantity',
+      'Date', 'Reason', 'Notes'
+    ],
+    'Expiry & Damaged Stock': [
+      'Product Name', 'SKU / Barcode', 'Batch Number',
+      'Expiry Date', 'Quantity', 'Damage Type',
+      'Estimated Loss', 'Description'
+    ],
+    'Purchase & Purchase Return': [
+      'Purchase / Return Number', 'Supplier Name', 'Mobile Number',
+      'Purchase Date', 'Product Details', 'Quantity',
+      'Total Amount', 'Paid Amount', 'Remaining Amount', 'Notes'
+    ],
+    'Suppliers': [
+      'Supplier Name', 'Company Name', 'Mobile Number',
+      'WhatsApp Number', 'Email', 'Address',
+      'Opening Balance', 'Notes'
+    ],
+    'Reports & Profit & Loss': [
+      'Report Title', 'Report Type', 'From Date', 'To Date',
+      'Total Sales', 'Total Purchases', 'Total Expenses',
+      'Profit / Loss', 'Notes'
+    ],
+    'Barcode Generate & Labels': [
+      'Product Name', 'SKU / Barcode', 'Barcode Type',
+      'Label Quantity', 'Label Size', 'Notes'
+    ],
+    'Bills & Printers': [
+      'Bill Title', 'Invoice Number', 'Customer Name',
+      'Bill Date', 'Total Amount', 'Printer Name', 'Notes'
+    ],
+    'WhatsApp': [
+      'Customer Name', 'Mobile / WhatsApp Number',
+      'Message Type', 'Message', 'Reference Number', 'Notes'
+    ],
+    'Raast & Instant Pay': [
+      'Transaction Title', 'Account Name', 'Raast ID / IBAN',
+      'Mobile Number', 'Transaction Date', 'Amount',
+      'Transaction Reference', 'Notes'
+    ],
+    'Payments': [
+      'Payment Title', 'Person / Company Name', 'Mobile Number',
+      'Payment Type', 'Payment Method', 'Date', 'Amount',
+      'Reference Number', 'Description'
+    ],
+    'Business & Branches': [
+      'Business / Branch Name', 'Business Type', 'Owner Name',
+      'Mobile Number', 'Email', 'Address', 'City',
+      'Tax Number', 'Notes'
+    ],
+    'Admin & Staff Management': [
+      'Employee Name', 'Employee ID', 'Mobile Number',
+      'Job Title', 'Department', 'Joining Date',
+      'Monthly Salary', 'Address', 'Notes'
+    ],
+    'Discounts & Taxes': [
+      'Rule / Tax Name', 'Rule Type', 'Percentage',
+      'Fixed Amount', 'Start Date', 'End Date',
+      'Description', 'Status'
+    ],
+    'Appointments & Reminders': [
+      'Title', 'Customer / Person Name', 'Mobile Number',
+      'Appointment Date', 'Appointment Time', 'Location',
+      'Reminder Details', 'Notes'
+    ],
+    'Customer Loyalty': [
+      'Customer Name', 'Mobile Number', 'Loyalty Points',
+      'Points Earned', 'Points Redeemed', 'Reward Details',
+      'Expiry Date', 'Notes'
+    ],
+    'Accounting & Cashbook': [
+      'Transaction Title', 'Transaction Type', 'Date',
+      'Cash In', 'Cash Out', 'Payment Method',
+      'Account Name', 'Description'
+    ],
+    'Bank & Cash Accounts': [
+      'Account Name', 'Bank Name', 'Account Type',
+      'Account Number / IBAN', 'Opening Balance',
+      'Current Balance', 'Branch Name', 'Notes'
+    ],
+    'Online Store / Website': [
+      'Store Name', 'Website Address', 'Product / Order',
+      'Customer Name', 'Mobile Number', 'Order Date',
+      'Order Amount', 'Status', 'Notes'
+    ],
+    'Settings': [
+      'Setting Name', 'Setting Value', 'Description'
+    ],
+    'Security & Permissions': [
+      'User Name', 'Role', 'Permission Details',
+      'Security Setting', 'Description'
+    ],
+    'Languages': [
+      'Language Name', 'Language Code', 'Text Direction',
+      'Status', 'Notes'
+    ],
+    'Backup & Restore': [
+      'Backup Title', 'Backup Date', 'Backup Type',
+      'File Name', 'Description'
+    ],
+    'Packages & Subscription': [
+      'Package Name', 'Subscription Type', 'Start Date',
+      'Expiry Date', 'Amount', 'Payment Reference', 'Notes'
+    ],
+    'Support': [
+      'Complaint / Request Title', 'Customer Name',
+      'Mobile Number', 'Issue Type', 'Date',
+      'Description', 'Resolution', 'Status'
+    ],
+    'History & Records': [
+      'Record Title', 'Record Type', 'Reference Number',
+      'Record Date', 'Description', 'Notes'
+    ],
+    'Activity History': [
+      'Activity Title', 'User Name', 'Activity Type',
+      'Activity Date', 'Description'
+    ],
+    'Customer Notifications': [
+      'Notification Title', 'Customer Name',
+      'Mobile Number', 'Message', 'Notification Date',
+      'Notification Type', 'Status'
+    ],
+  };
+
+  List<String> get fields => moduleFields[widget.moduleName] ??
+      ['Title', 'Date', 'Description', 'Amount', 'Notes'];
+
+  String get moduleKey => widget.moduleName;
+
+  @override
+  void initState() {
+    super.initState();
+    for (final field in fields) {
+      controllers[field] = TextEditingController();
+    }
+    loadRecords();
+  }
+
+  @override
+  void dispose() {
+    for (final controller in controllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> loadRecords() async {
+    setState(() => loading = true);
+    try {
+      final result =
+          await AppDatabase.instance.getModuleRecords(moduleKey);
+      if (!mounted) return;
+      setState(() {
+        records = result;
+        loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => loading = false);
+      showMessage('Records load nahi ho sake: $e');
+    }
+  }
+
+  void clearForm() {
+    for (final controller in controllers.values) {
+      controller.clear();
+    }
+    setState(() {
+      editingId = null;
+      status = 'Saved';
+    });
+  }
+
+  void showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  Future<void> saveRecord() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final data = <String, dynamic>{};
+    for (final entry in controllers.entries) {
+      data[entry.key] = entry.value.text.trim();
+    }
+
+    final title = controllers[fields.first]!.text.trim();
+
+    double amount = 0;
+    for (final entry in data.entries) {
+      final key = entry.key.toLowerCase();
+      if (key.contains('amount') ||
+          key.contains('salary') ||
+          key.contains('balance') ||
+          key.contains('profit') ||
+          key.contains('loss') ||
+          key.contains('cash in') ||
+          key.contains('cash out')) {
+        final value = double.tryParse(
+          entry.value.toString().replaceAll(',', ''),
+        );
+        if (value != null) {
+          amount = value;
+          break;
+        }
+      }
+    }
+
+    final date = data.entries
+        .firstWhere(
+          (e) => e.key.toLowerCase().contains('date'),
+          orElse: () => const MapEntry('', ''),
+        )
+        .value
+        .toString();
+
+    try {
+      if (editingId == null) {
+        await AppDatabase.instance.saveModuleRecord(
+          moduleKey: moduleKey,
+          title: title,
+          formData: data,
+          amount: amount,
+          status: status,
+          recordDate: date.isEmpty
+              ? DateTime.now().toIso8601String()
+              : date,
+        );
+        showMessage('Record successfully save ho gaya.');
+      } else {
+        await AppDatabase.instance.updateModuleRecord(
+          id: editingId!,
+          moduleKey: moduleKey,
+          title: title,
+          formData: data,
+          amount: amount,
+          status: status,
+          recordDate: date.isEmpty
+              ? DateTime.now().toIso8601String()
+              : date,
+        );
+        showMessage('Record update ho gaya.');
+      }
+
+      clearForm();
+      await loadRecords();
+    } catch (e) {
+      showMessage('Save nahi ho saka: $e');
+    }
+  }
+
+  void editRecord(Map<String, dynamic> record) {
+    try {
+      final decoded = jsonDecode(record['form_data'] as String);
+      final data = Map<String, dynamic>.from(decoded as Map);
+
+      for (final field in fields) {
+        controllers[field]!.text = data[field]?.toString() ?? '';
+      }
+
+      setState(() {
+        editingId = record['id'] as int;
+        status = record['status']?.toString() ?? 'Saved';
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Record edit mode mein hai.')),
+      );
+    } catch (e) {
+      showMessage('Record open nahi ho saka: $e');
+    }
+  }
+
+  Future<void> deleteRecord(int id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Record?'),
+        content: const Text('Kya aap ye record delete karna chahte hain?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    await AppDatabase.instance.deleteModuleRecord(id);
+    if (editingId == id) clearForm();
+    await loadRecords();
+    showMessage('Record delete ho gaya.');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.moduleName),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh Records',
+            onPressed: loadRecords,
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(widget.icon, size: 28),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          editingId == null
+                              ? 'New ${widget.moduleName} Entry'
+                              : 'Edit ${widget.moduleName}',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  Form(
+                    key: _formKey,
+                    child: Column(
+                      children: [
+                        for (int i = 0; i < fields.length; i++)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 13),
+                            child: TextFormField(
+                              controller: controllers[fields[i]],
+                              readOnly: fields[i].toLowerCase().contains('date'),
+                              onTap: fields[i].toLowerCase().contains('date')
+                                  ? () => pickDate(fields[i])
+                                  : null,
+                              keyboardType:
+                                  fields[i].toLowerCase().contains('amount') ||
+                                          fields[i].toLowerCase().contains('quantity') ||
+                                          fields[i].toLowerCase().contains('salary') ||
+                                          fields[i].toLowerCase().contains('balance') ||
+                                          fields[i].toLowerCase().contains('points') ||
+                                          fields[i].toLowerCase().contains('percentage')
+                                      ? const TextInputType.numberWithOptions(
+                                          decimal: true,
+                                        )
+                                      : TextInputType.text,
+                              maxLines: fields[i].toLowerCase().contains('description') ||
+                                      fields[i].toLowerCase().contains('notes') ||
+                                      fields[i].toLowerCase().contains('address') ||
+                                      fields[i].toLowerCase().contains('message')
+                                  ? 3
+                                  : 1,
+                              validator: i == 0
+                                  ? (value) => value == null ||
+                                          value.trim().isEmpty
+                                      ? '${fields[i]} zaroori hai'
+                                      : null
+                                  : null,
+                              decoration: InputDecoration(
+                                labelText: fields[i],
+                                border: const OutlineInputBorder(),
+                                prefixIcon: Icon(
+                                  fields[i].toLowerCase().contains('date')
+                                      ? Icons.calendar_today
+                                      : fields[i].toLowerCase().contains('amount') ||
+                                              fields[i].toLowerCase().contains('salary')
+                                          ? Icons.currency_rupee
+                                          : Icons.edit_note,
+                                ),
+                              ),
+                            ),
+                          ),
+                        DropdownButtonFormField<String>(
+                          value: status,
+                          decoration: const InputDecoration(
+                            labelText: 'Record Status',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: 'Saved', child: Text('Saved')),
+                            DropdownMenuItem(value: 'Pending', child: Text('Pending')),
+                            DropdownMenuItem(value: 'Completed', child: Text('Completed')),
+                            DropdownMenuItem(value: 'Paid', child: Text('Paid')),
+                            DropdownMenuItem(value: 'Cancelled', child: Text('Cancelled')),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() => status = value);
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: FilledButton.icon(
+                                onPressed: saveRecord,
+                                icon: const Icon(Icons.save),
+                                label: Text(
+                                  editingId == null ? 'Save Entry' : 'Update Entry',
+                                ),
+                              ),
+                            ),
+                            if (editingId != null) ...[
+                              const SizedBox(width: 8),
+                              IconButton(
+                                tooltip: 'Cancel Edit',
+                                onPressed: clearForm,
+                                icon: const Icon(Icons.close),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          TextField(
+            onChanged: (value) => setState(() => recordSearch = value),
+            decoration: const InputDecoration(
+              labelText: 'Search saved records',
+              hintText: 'Name, mobile, reference, status...',
+              prefixIcon: Icon(Icons.search),
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Saved Records',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+              Text('${filteredRecords.length} / ${records.length}'),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (loading)
+            const Center(child: CircularProgressIndicator())
+          else if (filteredRecords.isEmpty)
+            const Card(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: Center(child: Text('Abhi koi record mojood nahi.')),
+              ),
+            )
+          else
+            ...filteredRecords.map((record) {
+              final title = record['title']?.toString() ?? 'Record';
+              final amount = (record['amount'] as num?)?.toDouble() ?? 0;
+              final recordStatus = record['status']?.toString() ?? 'Saved';
+
+              return Card(
+                child: ListTile(
+                  leading: CircleAvatar(child: Icon(widget.icon)),
+                  title: Text(title),
+                  subtitle: Text(
+                    recordSummary(record),
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  onTap: () => editRecord(record),
+                  trailing: IconButton(
+                    tooltip: 'Delete',
+                    icon: const Icon(Icons.delete_outline),
+                    onPressed: () => deleteRecord(record['id'] as int),
+                  ),
+                ),
+              );
+            }),
+        ],
+      ),
+    );
+  }
+}

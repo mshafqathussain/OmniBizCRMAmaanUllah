@@ -1,0 +1,24 @@
+# Flutter build files
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+
+# Android build files
+android/.gradle/
+android/app/build/
+
+# Generated APK
+apk_downloa/app-release.apk
+
+# Sensitive Android signing and configuration
+**/key.properties
+**/*.jks
+**/*.keystore
+**/local.properties
+**/google-services.json
+
+# Temporary files
+*.log
+.DS_Store

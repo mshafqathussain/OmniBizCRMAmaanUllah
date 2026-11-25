@@ -1,0 +1,502 @@
+import 'package:flutter/material.dart';
+import 'screens/dashboard/dashboard_screen.dart';
+import 'screens/expenses/expense_category_screen.dart';
+import 'screens/products/product_management_screen.dart';
+import 'screens/sales/new_sale_screen.dart';
+import 'screens/sales/return_approval_screen.dart';
+import 'screens/sales/sales_return_screen.dart';
+import 'screens/modules/module_entry_screen.dart';
+import 'screens/customers/customer_management_screen.dart';
+import 'screens/suppliers/supplier_management_screen.dart';
+
+void main() => runApp(const OmniBizCRM());
+
+class OmniBizCRM extends StatelessWidget {
+  const OmniBizCRM({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'OmniBizCRM',
+      theme: ThemeData(
+        colorSchemeSeed: const Color(0xFF087E70),
+        useMaterial3: true,
+      ),
+      home: const OmniSplashScreen(),
+    );
+  }
+}
+
+class AppModule {
+  final String name;
+  final String category;
+  final IconData icon;
+  final List<String> options;
+
+  const AppModule(this.name, this.category, this.icon, this.options);
+}
+
+const modules = <AppModule>[
+  AppModule('Dashboard', 'Home', Icons.dashboard, ['Business Overview', 'Today Summary', 'Quick Actions']),
+  AppModule('New Sale', 'Sales', Icons.point_of_sale, ['Create New Sale', 'Sale History', 'Sale Details', 'Payment Received']),
+  AppModule('Sales Return', 'Sales', Icons.assignment_return, ['New Sales Return', 'Return History', 'Refund Details']),
+  AppModule('Orders & Quotations', 'Sales', Icons.request_quote, ['New Order', 'Order List', 'Create Quotation', 'Quotation History']),
+  AppModule('Products', 'Stock', Icons.inventory_2, ['Add Product', 'Product List', 'Edit Product', 'Product Categories', 'Product Barcode']),
+  AppModule('Customers', 'People', Icons.people, ['Add Customer', 'Customer List', 'Customer Details', 'Customer Ledger']),
+  AppModule('Khata', 'Accounts', Icons.menu_book, ['Naya Khata', 'Khata List', 'Customer Khata', 'Supplier Khata']),
+  AppModule('Baqaya Udhaar', 'Accounts', Icons.account_balance_wallet, ['Total Remaining Amount', 'Customer Wise Balance', 'Receive Payment']),
+  AppModule('Jama Raqam & Udhar Dein', 'Accounts', Icons.currency_exchange, ['Jama Raqam', 'Udhar Dein', 'Payment History']),
+  AppModule('Expenses', 'Accounts', Icons.wallet, ['Add Expense', 'Expense Categories', 'Expense History', 'Expense Reports']),
+  AppModule('Inventory & In Stock', 'Stock', Icons.warehouse, ['In Stock', 'Low Stock', 'Out of Stock', 'Stock History']),
+  AppModule('Warehouse', 'Stock', Icons.store, ['Add Warehouse', 'Warehouse List', 'Warehouse Stock']),
+  AppModule('Stock Transfer & Adjustment', 'Stock', Icons.swap_horiz, ['Transfer Stock', 'Stock Adjustment', 'Transfer History']),
+  AppModule('Expiry & Damaged Stock', 'Stock', Icons.warning_amber, ['Expired Products', 'Near Expiry', 'Damaged Stock']),
+  AppModule('Purchase & Purchase Return', 'Purchases', Icons.shopping_bag, ['New Purchase', 'Purchase History', 'Purchase Return', 'Return History']),
+  AppModule('Suppliers', 'People', Icons.local_shipping, ['Add Supplier', 'Supplier List', 'Supplier Details', 'Supplier Ledger']),
+  AppModule('Reports & Profit & Loss', 'Reports', Icons.bar_chart, ['Sales Report', 'Purchase Report', 'Expense Report', 'Profit & Loss', 'Stock Report', 'Khata Report']),
+  AppModule('Barcode Generate & Labels', 'Tools', Icons.qr_code_scanner, ['Generate Barcode', 'Print Labels', 'Scan Barcode']),
+  AppModule('Bills & Printers', 'Tools', Icons.print, ['Create Bill', 'Bill History', 'Printer Settings', 'Bill Design']),
+  AppModule('WhatsApp', 'Tools', Icons.message, ['Send Bill', 'Payment Reminder', 'Customer Message', 'WhatsApp Settings']),
+  AppModule('Raast & Instant Pay', 'Payments', Icons.bolt, ['Raast Payment', 'Payment Request', 'Payment History']),
+  AppModule('Payments', 'Payments', Icons.payment, ['Receive Payment', 'Make Payment', 'Payment Methods', 'Transactions']),
+  AppModule('Business & Branches', 'Management', Icons.business, ['Business Profile', 'Add Branch', 'Branch List', 'Business Details']),
+  AppModule('Admin & Staff Management', 'Management', Icons.groups, ['Add Staff', 'Staff List', 'Roles & Permissions', 'Staff Attendance']),
+  AppModule('Discounts & Taxes', 'Management', Icons.percent, ['Create Discount', 'Discount List', 'Tax Settings']),
+  AppModule('Appointments & Reminders', 'Management', Icons.event, ['Add Appointment', 'Appointment List', 'Set Reminder']),
+  AppModule('Customer Loyalty', 'Management', Icons.loyalty, ['Loyalty Points', 'Rewards', 'Customer Offers']),
+  AppModule('Accounting & Cashbook', 'Accounts', Icons.calculate, ['Cash In', 'Cash Out', 'Cashbook', 'Daily Closing']),
+  AppModule('Bank & Cash Accounts', 'Accounts', Icons.account_balance, ['Add Bank Account', 'Cash Account', 'Account History']),
+  AppModule('Online Store / Website', 'Online', Icons.language, ['Store Settings', 'Online Products', 'Online Orders']),
+  AppModule('Settings', 'System', Icons.settings, ['Business Settings', 'App Settings', 'Invoice Settings', 'Notification Settings']),
+  AppModule('Security & Permissions', 'System', Icons.security, ['App Lock', 'Change PIN', 'User Permissions', 'Login Security']),
+  AppModule('Languages', 'System', Icons.translate, ['Choose Language', 'Download Language Pack', 'Text Direction']),
+  AppModule('Backup & Restore', 'System', Icons.backup, ['Create Backup', 'Restore Backup', 'Backup History']),
+  AppModule('Packages & Subscription', 'System', Icons.workspace_premium, ['Current Package', 'Upgrade Package', 'Renew Subscription', 'Payment History']),
+  AppModule('Support', 'Help', Icons.support_agent, ['Contact Support', 'Submit Complaint', 'Help Center']),
+  AppModule('History & Records', 'Records', Icons.history, ['Sales Records', 'Purchase Records', 'Customer Records', 'Deleted Records']),
+  AppModule('Activity History', 'Records', Icons.manage_history, ['User Activity', 'Login History', 'Changes History']),
+  AppModule('Customer Notifications', 'Tools', Icons.notifications, ['Send Notification', 'Notification History', 'Message Settings']),
+];
+
+class DashboardScreen extends StatefulWidget {
+  const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  String search = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final shown = modules.where((m) =>
+      m.name.toLowerCase().contains(search.toLowerCase()) ||
+      m.category.toLowerCase().contains(search.toLowerCase())).toList();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('OmniBizCRM', style: TextStyle(fontWeight: FontWeight.bold)),
+        centerTitle: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_none),
+            onPressed: () => openModule(context, modules.last),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Apna Hisab Apne Pas', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                SizedBox(height: 6),
+                Text('Aapke business ka complete management'),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: TextField(
+              onChanged: (v) => setState(() => search = v),
+              decoration: InputDecoration(
+                hintText: 'Search options...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                const Text('All Business Options', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Spacer(),
+                Text('${shown.length} options'),
+              ],
+            ),
+          ),
+          Expanded(
+            child: GridView.builder(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 1.45,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+              ),
+              itemCount: shown.length,
+              itemBuilder: (context, index) {
+                final module = shown[index];
+                return Card(
+                  elevation: 1,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => openModule(context, module),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(module.icon, size: 30, color: Theme.of(context).colorScheme.primary),
+                          const SizedBox(height: 9),
+                          Text(module.name, textAlign: TextAlign.center,
+                            style: const TextStyle(fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 4),
+                          Text(module.category, style: Theme.of(context).textTheme.bodySmall),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+void openModule(BuildContext context, AppModule module) {
+  if (module.name == 'Dashboard') return;
+
+  Widget screen;
+
+  switch (module.name) {
+    case 'Customers':
+      screen = const CustomerManagementScreen();
+      break;
+
+    case 'Suppliers':
+      screen = const SupplierManagementScreen();
+      break;
+
+    case 'New Sale':
+      screen = const NewSaleScreen();
+      break;
+
+    case 'Products':
+      screen = const ProductManagementScreen();
+      break;
+
+    case 'Sales Return':
+      screen = const SalesReturnScreen();
+      break;
+
+    default:
+      screen = ModuleEntryScreen(
+        moduleName: module.name,
+        icon: module.icon,
+      );
+  }
+
+  Navigator.push(
+    context,
+    MaterialPageRoute(builder: (_) => screen),
+  );
+}
+
+class ModuleScreen extends StatelessWidget {
+  final AppModule module;
+  const ModuleScreen({super.key, required this.module});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(module.name)),
+      body: ListView(
+        padding: const EdgeInsets.all(12),
+        children: [
+          Card(
+            child: ListTile(
+              leading: Icon(module.icon, size: 32),
+              title: Text(module.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text(module.category),
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(8, 18, 8, 8),
+            child: Text('Sub Options', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ),
+          ...module.options.map((option) => Card(
+            child: ListTile(
+              leading: const Icon(Icons.arrow_forward_ios, size: 18),
+              title: Text(option),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(context, MaterialPageRoute(
+                builder: (_) {
+                  if (module.name == 'New Sale' &&
+                      option == 'Create New Sale') {
+                    return const NewSaleScreen();
+                  }
+                  if (module.name == 'Suppliers' &&
+                      option != 'Supplier Ledger') {
+                    return const SupplierManagementScreen();
+                  }
+                  if (module.name == 'Sales Return') {
+                    if (option == 'New Sales Return') {
+                      return const SalesReturnScreen();
+                    }
+                    if (option == 'Return History') {
+                      return const ReturnApprovalScreen();
+                    }
+                    if (option == 'Refund Details') {
+                      return const ReturnApprovalScreen(readOnly: true);
+                    }
+                  }
+                  return OptionScreen(title: option);
+                },
+              )),
+            ),
+          )),
+        ],
+      ),
+    );
+  }
+}
+
+class OptionScreen extends StatelessWidget {
+  final String title;
+  const OptionScreen({super.key, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.construction, size: 52),
+              const SizedBox(height: 16),
+              Text(title, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              const Text(
+                'Is option ka actual form aur data system aglay development step mein banaya jayega.',
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+class OmniSplashScreen extends StatefulWidget {
+  const OmniSplashScreen({super.key});
+
+  @override
+  State<OmniSplashScreen> createState() => _OmniSplashScreenState();
+}
+
+class _OmniSplashScreenState extends State<OmniSplashScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+  late final Animation<double> _fade;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    )..forward();
+
+    _scale = CurvedAnimation(parent: _controller, curve: Curves.easeOutBack);
+    _fade = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
+
+    Future.delayed(const Duration(milliseconds: 3000), () {
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          transitionDuration: const Duration(milliseconds: 500),
+          pageBuilder: (_, animation, __) => FadeTransition(
+            opacity: animation,
+            child: NewDashboardScreen(
+              modules: modules,
+              onOpenModule: (context, module) => openModule(context, module),
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const navy = Color(0xFF071426);
+    const blue = Color(0xFF168BFF);
+    const cyan = Color(0xFF38D9FF);
+
+    return Scaffold(
+      backgroundColor: navy,
+      body: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF102B50), navy, Color(0xFF030A16)],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Spacer(),
+                ScaleTransition(
+                  scale: _scale,
+                  child: FadeTransition(
+                    opacity: _fade,
+                    child: Container(
+                      width: 126,
+                      height: 126,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(32),
+                        gradient: const LinearGradient(
+                          colors: [cyan, blue, Color(0xFF1747B8)],
+                        ),
+                        border: Border.all(color: Colors.white70, width: 1.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: blue.withOpacity(0.65),
+                            blurRadius: 35,
+                            spreadRadius: 5,
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Text(
+                          'OB',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 54,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -4,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 30),
+                const Text(
+                  'OmniBizCRM',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 30,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'SMART BUSINESS MANAGEMENT',
+                  style: TextStyle(
+                    color: cyan,
+                    fontSize: 11,
+                    letterSpacing: 2.2,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Apna Hisab Apne Pas',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.75),
+                    fontSize: 15,
+                  ),
+                ),
+                const Spacer(),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 55),
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: 1),
+                    duration: const Duration(milliseconds: 2700),
+                    builder: (context, value, child) => Column(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: LinearProgressIndicator(
+                            value: value,
+                            minHeight: 5,
+                            backgroundColor: Colors.white12,
+                            valueColor:
+                                const AlwaysStoppedAnimation<Color>(cyan),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          'Loading... ${(value * 100).round()}%',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 35),
+                const Text(
+                  'GROW YOUR BUSINESS WITH OMNIBIZCRM',
+                  style: TextStyle(
+                    color: Colors.white38,
+                    fontSize: 9,
+                    letterSpacing: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 25),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

@@ -1,0 +1,86 @@
+name: OmniBizCRM Android APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_branch:
+        description: App code branch to build
+        required: true
+        default: main
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.build_branch || github.ref }}
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Generate Android project
+        run: flutter create . --platforms=android --org com.omnibizcrm --project-name app
+
+      - name: Verify Android package ID
+        run: |
+          grep -F 'namespace = "com.omnibizcrm.app"' android/app/build.gradle.kts
+          grep -F 'applicationId = "com.omnibizcrm.app"' android/app/build.gradle.kts
+
+      - uses: android-actions/setup-android@v4
+
+      - name: Install Android SDK 36
+        run: |
+          sdkmanager --licenses
+          sdkmanager "platforms;android-36"
+
+      - name: Set Android compile SDK
+        run: |
+          sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 36/' android/app/build.gradle.kts
+          grep -n 'compileSdk' android/app/build.gradle.kts
+
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      - name: Fix image_cropper Android compile SDK
+        run: |
+          PLUGIN_GRADLE="$(find "$HOME/.pub-cache" -path '*/image_cropper-*/android/build.gradle*' -not -path '*/example/*' -type f | head -n 1)"
+          if [ -z "$PLUGIN_GRADLE" ]; then
+            echo "image_cropper Gradle file not found"
+            exit 1
+          fi
+          sed -i -E 's/compileSdkVersion[[:space:]]+33/compileSdkVersion 36/g; s/compileSdk[[:space:]]*=[[:space:]]*33/compileSdk = 36/g' "$PLUGIN_GRADLE"
+
+      - name: Generate launcher icons
+        run: dart run flutter_launcher_icons
+
+      - name: Disable crashing Android lint tasks
+        run: |
+          cat >> android/build.gradle.kts <<'GRADLE'
+          subprojects {
+              tasks.configureEach {
+                  if (name.startsWith("lintVital")) {
+                      enabled = false
+                  }
+              }
+          }
+          GRADLE
+
+      - name: Build release APK
+        run: flutter build apk --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OmniBizCRM-Android-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
