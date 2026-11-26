@@ -450,7 +450,7 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
   }
 
 
-  Widget _section(String title, Widget child) {
+  Widget _section(String title, Widget child, {Widget? trailing}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(8),
@@ -462,11 +462,17 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF111827),
-          )),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(child: Text(title, style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF111827),
+              ))),
+              if (trailing != null) trailing,
+            ],
+          ),
           const SizedBox(height: 8),
           child,
         ],
@@ -810,25 +816,45 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
           _section('5. Payment Details', Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                children: ['Cash', 'Bank Transfer', 'Raast', 'JazzCash', 'Easypaisa',
-                  'Credit / Khata (Udhar)', 'Partial Payment'].map((option) {
+              GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisSpacing: 6,
+                mainAxisSpacing: 6,
+                childAspectRatio: 4.0,
+                children: [
+                  'Cash',
+                  'Bank Transfer',
+                  'Raast',
+                  'JazzCash',
+                  'Easypaisa',
+                  'Credit / Khata (Udhar)',
+                  'Partial Payment',
+                ].map((option) {
                   final selected = option == 'Credit / Khata (Udhar)'
                       ? paymentType == 'Udhaar'
                       : option == 'Partial Payment'
                           ? paymentType == 'Partial'
                           : paymentType == 'Cash' && paymentMethod == option;
 
-                  return ChoiceChip(
-                    label: Text(option, style: const TextStyle(fontSize: 12)),
-                    selected: selected,
-                    visualDensity: VisualDensity.compact,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
-                    onSelected: (value) {
-                      if (!value) return;
+                  final icon = option == 'Cash'
+                      ? Icons.payments_outlined
+                      : option == 'Bank Transfer'
+                          ? Icons.account_balance_outlined
+                          : option == 'Raast'
+                              ? Icons.swap_horiz
+                              : option == 'JazzCash'
+                                  ? Icons.phone_android
+                                  : option == 'Easypaisa'
+                                      ? Icons.account_balance_wallet_outlined
+                                      : option == 'Partial Payment'
+                                          ? Icons.monetization_on_outlined
+                                          : Icons.menu_book_outlined;
+
+                  return InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () {
                       if (option == 'Credit / Khata (Udhar)') {
                         _selectPaymentType('Udhaar');
                       } else if (option == 'Partial Payment') {
@@ -841,6 +867,47 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
                         });
                       }
                     },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7),
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? const Color(0xFFE8F5EC)
+                            : Colors.white,
+                        border: Border.all(
+                          color: selected
+                              ? const Color(0xFF0D9488)
+                              : const Color(0xFFE0E0E0),
+                          width: selected ? 1.5 : 1,
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(icon,
+                            size: 17,
+                            color: selected
+                                ? const Color(0xFF087E70)
+                                : Colors.grey.shade700),
+                          const SizedBox(width: 5),
+                          Expanded(
+                            child: Text(
+                              option == 'Credit / Khata (Udhar)'
+                                  ? 'Credit / Khata'
+                                  : option,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          if (selected)
+                            const Icon(Icons.check_circle,
+                              size: 14, color: Color(0xFF087E70)),
+                        ],
+                      ),
+                    ),
                   );
                 }).toList(),
               ),
@@ -854,26 +921,57 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
                 const SizedBox(width: 6),
                 Expanded(child: _infoCard('Remaining Balance', _rs(remaining))),
               ]),
-              const SizedBox(height: 8),
-              Row(children: [
-                const Text('Payment Status: '),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: status == 'Paid'
-                        ? const Color(0xFFDCFCE7)
-                        : const Color(0xFFFFF7ED),
-                    borderRadius: BorderRadius.circular(20),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Divider(height: 1, color: Color(0xFFE5E7EB)),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Payment Status',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF374151),
+                    ),
                   ),
-                  child: Text(status, style: TextStyle(
-                    color: status == 'Paid'
-                        ? const Color(0xFF15803D)
-                        : const Color(0xFFC2410C),
-                    fontWeight: FontWeight.bold,
-                  )),
-                ),
-              ]),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: status == 'Paid'
+                          ? const Color(0xFFDCFCE7)
+                          : status == 'Partially Paid'
+                              ? const Color(0xFFFFF7ED)
+                              : const Color(0xFFFEE2E2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      status,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: status == 'Paid'
+                            ? const Color(0xFF15803D)
+                            : status == 'Partially Paid'
+                                ? const Color(0xFFC2410C)
+                                : const Color(0xFFB91C1C),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ],
+          ), trailing: Text(
+            '${_rs(remaining)} Due',
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFFC2410C),
+            ),
           )),
 
           _section('6. Additional Details', Column(
@@ -988,21 +1086,35 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
   }
 
   Widget _infoCard(String label, String value) {
+    final isReceived = label == 'Received';
     return Container(
-      padding: const EdgeInsets.all(9),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF3F4F6),
-        borderRadius: BorderRadius.circular(12),
+        color: isReceived
+            ? const Color(0xFFF0FDF4)
+            : const Color(0xFFFFF7ED),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isReceived
+              ? const Color(0xFFBBF7D0)
+              : const Color(0xFFFED7AA),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 11)),
-          const SizedBox(height: 5),
+          Text(label, style: TextStyle(
+            color: isReceived
+                ? const Color(0xFF15803D)
+                : const Color(0xFFC2410C),
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+          )),
+          const SizedBox(height: 3),
           Text(value, style: const TextStyle(
             color: Color(0xFF111827),
             fontWeight: FontWeight.bold,
-            fontSize: 13,
+            fontSize: 14,
           )),
         ],
       ),
