@@ -18,7 +18,7 @@ class AppDatabase {
 
     _database = await openDatabase(
       path,
-      version: 15,
+      version: 16,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -405,10 +405,13 @@ class AppDatabase {
             'Box',
             'Plate',
           ]) {
-            await db.insert('measurement_units', {
-              'name': finalUnit,
-              'created_at': DateTime.now().toIso8601String(),
-            }, conflictAlgorithm: ConflictAlgorithm.ignore);
+            await db.insert(
+                'measurement_units',
+                {
+                  'name': finalUnit,
+                  'created_at': DateTime.now().toIso8601String(),
+                },
+                conflictAlgorithm: ConflictAlgorithm.ignore);
           }
         }
         if (oldVersion < 5) {
@@ -617,6 +620,21 @@ class AppDatabase {
         if (oldVersion < 15) {
           await db.execute('ALTER TABLE products ADD COLUMN barcode TEXT');
         }
+
+        if (oldVersion < 16) {
+          await db
+              .execute('ALTER TABLE expenses ADD COLUMN main_category TEXT');
+          await db.execute(
+              'ALTER TABLE expenses ADD COLUMN expense_type_category TEXT');
+          await db.execute('ALTER TABLE expenses ADD COLUMN expense_type TEXT');
+          await db.execute(
+              "ALTER TABLE expenses ADD COLUMN payment_status TEXT NOT NULL DEFAULT 'Unpaid'");
+          await db.execute(
+              'ALTER TABLE expenses ADD COLUMN paid_amount REAL NOT NULL DEFAULT 0');
+          await db.execute('ALTER TABLE expenses ADD COLUMN frequency TEXT');
+          await db
+              .execute('ALTER TABLE expenses ADD COLUMN attachment_path TEXT');
+        }
       },
     );
 
@@ -723,7 +741,9 @@ class AppDatabase {
     final q = query.trim();
     return db.query(
       'customers',
-      where: q.isEmpty ? null : 'name LIKE ? OR mobile LIKE ? OR whatsapp LIKE ? OR email LIKE ? OR business_name LIKE ?',
+      where: q.isEmpty
+          ? null
+          : 'name LIKE ? OR mobile LIKE ? OR whatsapp LIKE ? OR email LIKE ? OR business_name LIKE ?',
       whereArgs: q.isEmpty ? null : List.filled(5, '%$q%'),
       orderBy: 'name COLLATE NOCASE ASC',
     );
@@ -847,9 +867,8 @@ class AppDatabase {
         final quantity = (item['quantity'] as num?)?.toDouble();
         final price = (item['price'] as num?)?.toDouble();
         final rawProductId = item['productId'];
-        final productId = rawProductId == null
-            ? null
-            : (rawProductId as num).toInt();
+        final productId =
+            rawProductId == null ? null : (rawProductId as num).toInt();
 
         if (quantity == null ||
             !quantity.isFinite ||
@@ -942,8 +961,8 @@ class AppDatabase {
       final status = remaining <= 0.000001
           ? 'Paid'
           : paid > 0
-          ? 'Partial'
-          : 'Unpaid';
+              ? 'Partial'
+              : 'Unpaid';
 
       final temporaryBillNumber =
           'PENDING-${DateTime.now().microsecondsSinceEpoch}';
@@ -1123,10 +1142,8 @@ class AppDatabase {
     required Map<String, dynamic> formData,
   }) async {
     final db = await database;
-    final now = DateTime.now()
-        .toUtc()
-        .add(const Duration(hours: 5))
-        .toIso8601String();
+    final now =
+        DateTime.now().toUtc().add(const Duration(hours: 5)).toIso8601String();
     final encoded = jsonEncode(formData);
     final invoice = invoiceNumber?.trim();
 
@@ -1293,10 +1310,8 @@ class AppDatabase {
     }
 
     final db = await database;
-    final now = DateTime.now()
-        .toUtc()
-        .add(const Duration(hours: 5))
-        .toIso8601String();
+    final now =
+        DateTime.now().toUtc().add(const Duration(hours: 5)).toIso8601String();
 
     return db.transaction((txn) async {
       final sales = await txn.query(
@@ -1379,8 +1394,8 @@ class AppDatabase {
           [saleItemId],
         );
 
-        final previouslyReturned = (previousRows.first['returned'] as num)
-            .toDouble();
+        final previouslyReturned =
+            (previousRows.first['returned'] as num).toDouble();
 
         final available = (soldQuantity - previouslyReturned).clamp(
           0.0,
@@ -1435,13 +1450,13 @@ class AppDatabase {
         "AND status NOT IN ('Rejected', 'Cancelled')",
         [saleId],
       );
-      final previousRefunded = (previousRefundRows.first['refunded'] as num)
-          .toDouble();
+      final previousRefunded =
+          (previousRefundRows.first['refunded'] as num).toDouble();
       final remainingRefund =
           ((sale['total'] as num).toDouble() - previousRefunded).clamp(
-            0.0,
-            double.infinity,
-          );
+        0.0,
+        double.infinity,
+      );
 
       if (totalAmount > remainingRefund + 0.000001) {
         throw StateError(
@@ -1538,10 +1553,8 @@ class AppDatabase {
     String? approverId,
   }) async {
     final db = await database;
-    final now = DateTime.now()
-        .toUtc()
-        .add(const Duration(hours: 5))
-        .toIso8601String();
+    final now =
+        DateTime.now().toUtc().add(const Duration(hours: 5)).toIso8601String();
 
     return db.transaction((txn) async {
       final rows = await txn.query(
@@ -1586,10 +1599,8 @@ class AppDatabase {
 
         final quantity = (item['return_quantity'] as num).toDouble();
         final productId = item['product_id'] as int?;
-        final condition = (item['item_condition'] ?? '')
-            .toString()
-            .trim()
-            .toLowerCase();
+        final condition =
+            (item['item_condition'] ?? '').toString().trim().toLowerCase();
 
         if (quantity <= 0 || !quantity.isFinite) {
           throw StateError('Invalid return quantity.');
@@ -1720,14 +1731,12 @@ class AppDatabase {
       [from, to],
     );
 
-    final customers =
-        Sqflite.firstIntValue(
+    final customers = Sqflite.firstIntValue(
           await db.rawQuery('SELECT COUNT(*) FROM customers'),
         ) ??
         0;
 
-    final products =
-        Sqflite.firstIntValue(
+    final products = Sqflite.firstIntValue(
           await db.rawQuery('SELECT COUNT(*) FROM products'),
         ) ??
         0;
@@ -1927,7 +1936,9 @@ class AppDatabase {
     final q = query.trim();
     return db.query(
       'suppliers',
-      where: q.isEmpty ? null : 'name LIKE ? OR mobile LIKE ? OR company_name LIKE ? OR whatsapp LIKE ?',
+      where: q.isEmpty
+          ? null
+          : 'name LIKE ? OR mobile LIKE ? OR company_name LIKE ? OR whatsapp LIKE ?',
       whereArgs: q.isEmpty ? null : ['%$q%', '%$q%', '%$q%', '%$q%'],
       orderBy: 'name COLLATE NOCASE ASC',
     );
@@ -2014,6 +2025,13 @@ class AppDatabase {
     String? paymentMethod,
     String? paidTo,
     String? referenceNumber,
+    String? mainCategory,
+    String? expenseTypeCategory,
+    String? expenseType,
+    String? paymentStatus,
+    double? paidAmount,
+    String? frequency,
+    String? attachmentPath,
   }) async {
     if (category.trim().isEmpty) {
       throw ArgumentError('Expense category zaroori hai.');
@@ -2032,6 +2050,13 @@ class AppDatabase {
       'expense_date': expenseDate,
       'paid_to': paidTo?.trim(),
       'reference_number': referenceNumber?.trim(),
+      'main_category': mainCategory?.trim(),
+      'expense_type_category': expenseTypeCategory?.trim(),
+      'expense_type': expenseType?.trim(),
+      'payment_status': paymentStatus?.trim() ?? 'Unpaid',
+      'paid_amount': paidAmount ?? 0,
+      'frequency': frequency?.trim(),
+      'attachment_path': attachmentPath?.trim(),
     });
   }
 
@@ -2045,6 +2070,13 @@ class AppDatabase {
     String? paymentMethod,
     String? paidTo,
     String? referenceNumber,
+    String? mainCategory,
+    String? expenseTypeCategory,
+    String? expenseType,
+    String? paymentStatus,
+    double? paidAmount,
+    String? frequency,
+    String? attachmentPath,
   }) async {
     if (category.trim().isEmpty) {
       throw ArgumentError('Expense category zaroori hai.');
@@ -2065,6 +2097,13 @@ class AppDatabase {
         'expense_date': expenseDate,
         'paid_to': paidTo?.trim(),
         'reference_number': referenceNumber?.trim(),
+        'main_category': mainCategory?.trim(),
+        'expense_type_category': expenseTypeCategory?.trim(),
+        'expense_type': expenseType?.trim(),
+        'payment_status': paymentStatus?.trim() ?? 'Unpaid',
+        'paid_amount': paidAmount ?? 0,
+        'frequency': frequency?.trim(),
+        'attachment_path': attachmentPath?.trim(),
       },
       where: 'id = ?',
       whereArgs: [id],
@@ -2083,13 +2122,11 @@ class AppDatabase {
 
     if (q.isNotEmpty) {
       conditions.add(
-        '(title LIKE ? OR category LIKE ? OR description LIKE ? OR paid_to LIKE ? OR reference_number LIKE ?)',
+        '(title LIKE ? OR category LIKE ? OR main_category LIKE ? OR expense_type_category LIKE ? OR expense_type LIKE ? OR description LIKE ? OR paid_to LIKE ? OR reference_number LIKE ?)',
       );
-      args.add('%$q%');
-      args.add('%$q%');
-      args.add('%$q%');
-      args.add('%$q%');
-      args.add('%$q%');
+      for (var i = 0; i < 8; i++) {
+        args.add('%$q%');
+      }
     }
     if (fromDate != null && fromDate.isNotEmpty) {
       conditions.add('expense_date >= ?');

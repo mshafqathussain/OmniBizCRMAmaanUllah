@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'screens/dashboard/dashboard_screen.dart';
-import 'screens/expenses/expense_category_screen.dart';
+import 'screens/expenses/expense_management_screen.dart';
 import 'screens/products/product_management_screen.dart';
 import 'screens/sales/new_sale_screen.dart';
 import 'screens/sales/return_approval_screen.dart';
@@ -244,6 +244,10 @@ void openModule(BuildContext context, AppModule module) {
 
     case 'Sales Return':
       screen = const SalesReturnScreen();
+      break;
+
+    case 'Expenses':
+      screen = const ExpenseManagementScreen();
       break;
 
     default:
