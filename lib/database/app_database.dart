@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -17,7 +18,7 @@ class AppDatabase {
 
     _database = await openDatabase(
       path,
-      version: 14,
+      version: 15,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -45,6 +46,7 @@ class AppDatabase {
           CREATE TABLE products (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
+            barcode TEXT,
             sku TEXT,
             category TEXT,
             brand TEXT,
@@ -78,8 +80,15 @@ class AppDatabase {
         ''');
 
         for (final finalUnit in [
-          'Kg', 'Gram', 'Litre', 'ML', 'Piece',
-          'Packet', 'Dozen', 'Box', 'Plate',
+          'Kg',
+          'Gram',
+          'Litre',
+          'ML',
+          'Piece',
+          'Packet',
+          'Dozen',
+          'Box',
+          'Plate',
         ]) {
           batch.execute(
             'INSERT OR IGNORE INTO measurement_units (name, created_at) VALUES (?, ?)',
@@ -191,16 +200,13 @@ class AppDatabase {
           )
         ''');
 
-        batch.execute(
-          'CREATE INDEX idx_sales_date ON sales(sale_date)',
-        );
+        batch.execute('CREATE INDEX idx_sales_date ON sales(sale_date)');
         batch.execute(
           'CREATE INDEX idx_payments_customer ON payments(customer_id)',
         );
         batch.execute(
           'CREATE INDEX idx_expenses_date ON expenses(expense_date)',
         );
-
 
         batch.execute('''
           CREATE TABLE sale_returns (
@@ -310,7 +316,6 @@ class AppDatabase {
           'CREATE INDEX idx_refunds_status ON refund_transactions(status)',
         );
 
-
         batch.execute('''
           CREATE TABLE IF NOT EXISTS module_records (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -355,9 +360,7 @@ class AppDatabase {
         }
 
         if (oldVersion < 3) {
-          await db.execute(
-            'ALTER TABLE products ADD COLUMN image_path TEXT',
-          );
+          await db.execute('ALTER TABLE products ADD COLUMN image_path TEXT');
         }
 
         if (oldVersion < 4) {
@@ -392,17 +395,20 @@ class AppDatabase {
           ''');
 
           for (final finalUnit in [
-            'Kg', 'Gram', 'Litre', 'ML', 'Piece',
-            'Packet', 'Dozen', 'Box', 'Plate',
+            'Kg',
+            'Gram',
+            'Litre',
+            'ML',
+            'Piece',
+            'Packet',
+            'Dozen',
+            'Box',
+            'Plate',
           ]) {
-            await db.insert(
-              'measurement_units',
-              {
-                'name': finalUnit,
-                'created_at': DateTime.now().toIso8601String(),
-              },
-              conflictAlgorithm: ConflictAlgorithm.ignore,
-            );
+            await db.insert('measurement_units', {
+              'name': finalUnit,
+              'created_at': DateTime.now().toIso8601String(),
+            }, conflictAlgorithm: ConflictAlgorithm.ignore);
           }
         }
         if (oldVersion < 5) {
@@ -412,16 +418,18 @@ class AppDatabase {
           await db.execute(
             'ALTER TABLE sales ADD COLUMN reference_number TEXT',
           );
-          await db.execute(
-            'ALTER TABLE sales ADD COLUMN notes TEXT',
-          );
+          await db.execute('ALTER TABLE sales ADD COLUMN notes TEXT');
         }
         if (oldVersion < 6) {
           await db.execute('ALTER TABLE customers ADD COLUMN whatsapp TEXT');
           await db.execute('ALTER TABLE customers ADD COLUMN cnic TEXT');
           await db.execute('ALTER TABLE customers ADD COLUMN email TEXT');
-          await db.execute('ALTER TABLE customers ADD COLUMN business_name TEXT');
-          await db.execute('ALTER TABLE customers ADD COLUMN additional_contact TEXT');
+          await db.execute(
+            'ALTER TABLE customers ADD COLUMN business_name TEXT',
+          );
+          await db.execute(
+            'ALTER TABLE customers ADD COLUMN additional_contact TEXT',
+          );
           await db.execute('ALTER TABLE customers ADD COLUMN notes TEXT');
         }
 
@@ -538,7 +546,6 @@ class AppDatabase {
           ''');
         }
 
-
         if (oldVersion < 10) {
           await db.execute('''
             CREATE TABLE IF NOT EXISTS module_records (
@@ -559,7 +566,6 @@ class AppDatabase {
             ON module_records(module_key, record_date)
           ''');
         }
-
 
         if (oldVersion < 11) {
           final supplierColumns = [
@@ -582,15 +588,15 @@ class AppDatabase {
           ];
 
           for (final column in supplierColumns) {
-            await db.execute(
-              'ALTER TABLE suppliers ADD COLUMN $column',
-            );
+            await db.execute('ALTER TABLE suppliers ADD COLUMN $column');
           }
         }
 
         if (oldVersion < 12) {
           await db.execute('ALTER TABLE expenses ADD COLUMN paid_to TEXT');
-          await db.execute('ALTER TABLE expenses ADD COLUMN reference_number TEXT');
+          await db.execute(
+            'ALTER TABLE expenses ADD COLUMN reference_number TEXT',
+          );
         }
 
         if (oldVersion < 13) {
@@ -599,17 +605,23 @@ class AppDatabase {
 
         if (oldVersion < 14) {
           await db.execute('ALTER TABLE products ADD COLUMN brand TEXT');
-          await db.execute('ALTER TABLE products ADD COLUMN tax_percent REAL NOT NULL DEFAULT 0');
-          await db.execute("ALTER TABLE products ADD COLUMN status TEXT NOT NULL DEFAULT 'Active'");
+          await db.execute(
+            'ALTER TABLE products ADD COLUMN tax_percent REAL NOT NULL DEFAULT 0',
+          );
+          await db.execute(
+            "ALTER TABLE products ADD COLUMN status TEXT NOT NULL DEFAULT 'Active'",
+          );
           await db.execute('ALTER TABLE products ADD COLUMN description TEXT');
         }
 
+        if (oldVersion < 15) {
+          await db.execute('ALTER TABLE products ADD COLUMN barcode TEXT');
+        }
       },
     );
 
     return _database!;
   }
-
 
   Future<List<Map<String, dynamic>>> searchCustomers(String query) async {
     final db = await database;
@@ -642,8 +654,8 @@ class AppDatabase {
 
     final rows = await db.query(
       'products',
-      where: 'LOWER(TRIM(sku)) = LOWER(?)',
-      whereArgs: [code],
+      where: 'LOWER(TRIM(barcode)) = LOWER(?) OR LOWER(TRIM(sku)) = LOWER(?)',
+      whereArgs: [code, code],
       limit: 1,
     );
 
@@ -706,16 +718,12 @@ class AppDatabase {
     });
   }
 
-  Future<List<Map<String, dynamic>>> getCustomers({
-    String query = '',
-  }) async {
+  Future<List<Map<String, dynamic>>> getCustomers({String query = ''}) async {
     final db = await database;
     final q = query.trim();
     return db.query(
       'customers',
-      where: q.isEmpty
-          ? null
-          : 'name LIKE ? OR mobile LIKE ? OR whatsapp LIKE ? OR email LIKE ? OR business_name LIKE ?',
+      where: q.isEmpty ? null : 'name LIKE ? OR mobile LIKE ? OR whatsapp LIKE ? OR email LIKE ? OR business_name LIKE ?',
       whereArgs: q.isEmpty ? null : List.filled(5, '%$q%'),
       orderBy: 'name COLLATE NOCASE ASC',
     );
@@ -787,11 +795,7 @@ class AppDatabase {
         );
       }
 
-      return txn.delete(
-        'customers',
-        where: 'id = ?',
-        whereArgs: [id],
-      );
+      return txn.delete('customers', where: 'id = ?', whereArgs: [id]);
     });
   }
 
@@ -809,14 +813,19 @@ class AppDatabase {
     if (items.isEmpty) {
       throw ArgumentError('Sale must contain at least one item');
     }
-    if (!discount.isFinite || discount < 0 ||
-        !tax.isFinite || tax < 0 ||
-        !paid.isFinite || paid < 0) {
+    if (!discount.isFinite ||
+        discount < 0 ||
+        !tax.isFinite ||
+        tax < 0 ||
+        !paid.isFinite ||
+        paid < 0) {
       throw ArgumentError('Invalid discount, tax or payment amount');
     }
 
     final db = await database;
-    final now = (saleDate ?? DateTime.now().toUtc().add(const Duration(hours: 5))).toIso8601String();
+    final now =
+        (saleDate ?? DateTime.now().toUtc().add(const Duration(hours: 5)))
+            .toIso8601String();
 
     return db.transaction((txn) async {
       if (customerId != null) {
@@ -842,8 +851,12 @@ class AppDatabase {
             ? null
             : (rawProductId as num).toInt();
 
-        if (quantity == null || !quantity.isFinite || quantity <= 0 ||
-            price == null || !price.isFinite || price < 0) {
+        if (quantity == null ||
+            !quantity.isFinite ||
+            quantity <= 0 ||
+            price == null ||
+            !price.isFinite ||
+            price < 0) {
           throw ArgumentError('Invalid item quantity or price');
         }
 
@@ -928,9 +941,12 @@ class AppDatabase {
 
       final status = remaining <= 0.000001
           ? 'Paid'
-          : paid > 0 ? 'Partial' : 'Unpaid';
+          : paid > 0
+          ? 'Partial'
+          : 'Unpaid';
 
-      final temporaryBillNumber = 'PENDING-${DateTime.now().microsecondsSinceEpoch}';
+      final temporaryBillNumber =
+          'PENDING-${DateTime.now().microsecondsSinceEpoch}';
 
       final saleId = await txn.insert('sales', {
         'bill_number': temporaryBillNumber,
@@ -948,13 +964,15 @@ class AppDatabase {
       });
 
       final billNumber = 'OB-${saleId.toString().padLeft(6, '0')}';
-      await txn.update('sales', {'bill_number': billNumber}, where: 'id = ?', whereArgs: [saleId]);
+      await txn.update(
+        'sales',
+        {'bill_number': billNumber},
+        where: 'id = ?',
+        whereArgs: [saleId],
+      );
 
       for (final item in preparedItems) {
-        await txn.insert('sale_items', {
-          'sale_id': saleId,
-          ...item,
-        });
+        await txn.insert('sale_items', {'sale_id': saleId, ...item});
 
         final productId = item['product_id'] as int?;
         if (productId != null) {
@@ -1070,14 +1088,17 @@ class AppDatabase {
 
   Future<Map<String, dynamic>?> getSaleDetails(int saleId) async {
     final db = await database;
-    final saleRows = await db.rawQuery('''
+    final saleRows = await db.rawQuery(
+      '''
       SELECT sales.*, customers.name AS customer_name,
              customers.mobile AS customer_mobile,
              customers.address AS customer_address
       FROM sales
       LEFT JOIN customers ON customers.id = sales.customer_id
       WHERE sales.id = ?
-    ''', [saleId]);
+    ''',
+      [saleId],
+    );
     if (saleRows.isEmpty) return null;
 
     final items = await db.query(
@@ -1093,14 +1114,8 @@ class AppDatabase {
       orderBy: 'id ASC',
     );
 
-    return {
-      'sale': saleRows.first,
-      'items': items,
-      'payments': payments,
-    };
+    return {'sale': saleRows.first, 'items': items, 'payments': payments};
   }
-
-
 
   Future<Map<String, dynamic>> saveSaleReturnDraft({
     int? draftId,
@@ -1158,11 +1173,7 @@ class AppDatabase {
         'updated_at': now,
       });
 
-      return {
-        'id': id,
-        'draft_number': draftNumber,
-        'status': 'Draft',
-      };
+      return {'id': id, 'draft_number': draftNumber, 'status': 'Draft'};
     });
   }
 
@@ -1210,14 +1221,13 @@ class AppDatabase {
     );
   }
 
-  Future<Map<String, dynamic>?> getSaleForReturn(
-    String invoiceNumber,
-  ) async {
+  Future<Map<String, dynamic>?> getSaleForReturn(String invoiceNumber) async {
     final db = await database;
     final invoice = invoiceNumber.trim();
     if (invoice.isEmpty) return null;
 
-    final sales = await db.rawQuery('''
+    final sales = await db.rawQuery(
+      '''
       SELECT sales.*,
              customers.name AS customer_name,
              customers.mobile AS customer_mobile
@@ -1225,13 +1235,16 @@ class AppDatabase {
       LEFT JOIN customers ON customers.id = sales.customer_id
       WHERE sales.bill_number = ? COLLATE NOCASE
       LIMIT 1
-    ''', [invoice]);
+    ''',
+      [invoice],
+    );
 
     if (sales.isEmpty) return null;
     final sale = sales.first;
     final saleId = sale['id'] as int;
 
-    final items = await db.rawQuery('''
+    final items = await db.rawQuery(
+      '''
       SELECT sale_items.*,
         COALESCE((
           SELECT SUM(sri.return_quantity)
@@ -1243,16 +1256,16 @@ class AppDatabase {
       FROM sale_items
       WHERE sale_items.sale_id = ?
       ORDER BY id ASC
-    ''', [saleId]);
+    ''',
+      [saleId],
+    );
 
     final returnItems = items.map((item) {
       final sold = (item['quantity'] as num).toDouble();
-      final returned =
-          (item['previously_returned_quantity'] as num).toDouble();
+      final returned = (item['previously_returned_quantity'] as num).toDouble();
       return {
         ...item,
-        'available_return_quantity':
-            (sold - returned).clamp(0.0, sold),
+        'available_return_quantity': (sold - returned).clamp(0.0, sold),
       };
     }).toList();
 
@@ -1336,8 +1349,7 @@ class AppDatabase {
 
         final saleItemId = rawId.toInt();
         final quantity = rawQuantity.toDouble();
-        final condition =
-            (entry['item_condition'] ?? '').toString().trim();
+        final condition = (entry['item_condition'] ?? '').toString().trim();
 
         if (!quantity.isFinite || quantity <= 0) {
           throw ArgumentError('Return quantity must be greater than zero.');
@@ -1354,22 +1366,26 @@ class AppDatabase {
           throw ArgumentError('Return item does not belong to this invoice.');
         }
 
-        final soldQuantity =
-            (soldItem['quantity'] as num).toDouble();
+        final soldQuantity = (soldItem['quantity'] as num).toDouble();
 
-        final previousRows = await txn.rawQuery("""
+        final previousRows = await txn.rawQuery(
+          """
           SELECT COALESCE(SUM(sri.return_quantity), 0) AS returned
           FROM sale_return_items sri
           INNER JOIN sale_returns sr ON sr.id = sri.return_id
           WHERE sri.sale_item_id = ?
             AND sr.status NOT IN ('Rejected', 'Cancelled')
-        """, [saleItemId]);
+        """,
+          [saleItemId],
+        );
 
-        final previouslyReturned =
-            (previousRows.first['returned'] as num).toDouble();
+        final previouslyReturned = (previousRows.first['returned'] as num)
+            .toDouble();
 
-        final available =
-            (soldQuantity - previouslyReturned).clamp(0.0, soldQuantity);
+        final available = (soldQuantity - previouslyReturned).clamp(
+          0.0,
+          soldQuantity,
+        );
 
         if (quantity > available + 0.000001) {
           throw StateError(
@@ -1405,10 +1421,9 @@ class AppDatabase {
       final returnRatio = returnedGross / originalSubtotal;
       final allocatedDiscount = originalDiscount * returnRatio;
       final allocatedTax = originalTax * returnRatio;
-      final totalAmount =
-          (returnedGross - allocatedDiscount + allocatedTax)
-              .clamp(0.0, returnedGross + allocatedTax)
-              .toDouble();
+      final totalAmount = (returnedGross - allocatedDiscount + allocatedTax)
+          .clamp(0.0, returnedGross + allocatedTax)
+          .toDouble();
 
       if (!totalAmount.isFinite) {
         throw ArgumentError('Calculated refund amount is invalid.');
@@ -1420,11 +1435,13 @@ class AppDatabase {
         "AND status NOT IN ('Rejected', 'Cancelled')",
         [saleId],
       );
-      final previousRefunded =
-          (previousRefundRows.first['refunded'] as num).toDouble();
+      final previousRefunded = (previousRefundRows.first['refunded'] as num)
+          .toDouble();
       final remainingRefund =
-          ((sale['total'] as num).toDouble() - previousRefunded)
-              .clamp(0.0, double.infinity);
+          ((sale['total'] as num).toDouble() - previousRefunded).clamp(
+            0.0,
+            double.infinity,
+          );
 
       if (totalAmount > remainingRefund + 0.000001) {
         throw StateError(
@@ -1491,7 +1508,6 @@ class AppDatabase {
       };
     });
   }
-
 
   Future<List<Map<String, dynamic>>> getSaleReturnHistory() async {
     final db = await database;
@@ -1570,8 +1586,10 @@ class AppDatabase {
 
         final quantity = (item['return_quantity'] as num).toDouble();
         final productId = item['product_id'] as int?;
-        final condition =
-            (item['item_condition'] ?? '').toString().trim().toLowerCase();
+        final condition = (item['item_condition'] ?? '')
+            .toString()
+            .trim()
+            .toLowerCase();
 
         if (quantity <= 0 || !quantity.isFinite) {
           throw StateError('Invalid return quantity.');
@@ -1625,11 +1643,7 @@ class AppDatabase {
 
       await txn.update(
         'refund_transactions',
-        {
-          'status': 'Completed',
-          'completed_at': now,
-          'verified_by': approverId,
-        },
+        {'status': 'Completed', 'completed_at': now, 'verified_by': approverId},
         where: 'refund_id = ? AND status = ?',
         whereArgs: [refundId, 'Pending'],
       );
@@ -1663,8 +1677,11 @@ class AppDatabase {
     final DateTime start;
     switch (period) {
       case 'Weekly':
-        start = DateTime(now.year, now.month, now.day)
-            .subtract(Duration(days: now.weekday - 1));
+        start = DateTime(
+          now.year,
+          now.month,
+          now.day,
+        ).subtract(Duration(days: now.weekday - 1));
         break;
       case 'Monthly':
         start = DateTime(now.year, now.month);
@@ -1682,28 +1699,38 @@ class AppDatabase {
     final from = start.toIso8601String();
     final to = now.add(const Duration(days: 1)).toIso8601String();
 
-    final sales = await db.rawQuery('''
+    final sales = await db.rawQuery(
+      '''
       SELECT
         COALESCE(SUM(total), 0) AS total,
         COALESCE(SUM(paid), 0) AS paid,
         COALESCE(SUM(remaining), 0) AS remaining
       FROM sales
       WHERE sale_date >= ? AND sale_date < ?
-    ''', [from, to]);
+    ''',
+      [from, to],
+    );
 
-    final expenses = await db.rawQuery('''
+    final expenses = await db.rawQuery(
+      '''
       SELECT COALESCE(SUM(amount), 0) AS total
       FROM expenses
       WHERE expense_date >= ? AND expense_date < ?
-    ''', [from, to]);
+    ''',
+      [from, to],
+    );
 
-    final customers = Sqflite.firstIntValue(
-      await db.rawQuery('SELECT COUNT(*) FROM customers'),
-    ) ?? 0;
+    final customers =
+        Sqflite.firstIntValue(
+          await db.rawQuery('SELECT COUNT(*) FROM customers'),
+        ) ??
+        0;
 
-    final products = Sqflite.firstIntValue(
-      await db.rawQuery('SELECT COUNT(*) FROM products'),
-    ) ?? 0;
+    final products =
+        Sqflite.firstIntValue(
+          await db.rawQuery('SELECT COUNT(*) FROM products'),
+        ) ??
+        0;
 
     final stock = await db.rawQuery('''
       SELECT
@@ -1717,11 +1744,14 @@ class AppDatabase {
     final paid = (sales.first['paid'] as num).toDouble();
     final remaining = (sales.first['remaining'] as num).toDouble();
     final expenseTotal = (expenses.first['total'] as num).toDouble();
-    final costResult = await db.rawQuery('''
+    final costResult = await db.rawQuery(
+      '''
       SELECT COALESCE(SUM(quantity * cost_price), 0) AS total
       FROM sale_items
       WHERE sale_id IN (SELECT id FROM sales WHERE sale_date >= ? AND sale_date < ?)
-    ''', [from, to]);
+    ''',
+      [from, to],
+    );
     final costTotal = (costResult.first['total'] as num).toDouble();
 
     return {
@@ -1737,7 +1767,6 @@ class AppDatabase {
       'outOfStock': stock.first['empty'],
     };
   }
-
 
   // Save a record for any business module.
   Future<int> saveModuleRecord({
@@ -1804,9 +1833,7 @@ class AppDatabase {
   }
 
   // Get all records belonging to one module.
-  Future<List<Map<String, dynamic>>> getModuleRecords(
-    String moduleKey,
-  ) async {
+  Future<List<Map<String, dynamic>>> getModuleRecords(String moduleKey) async {
     final db = await database;
     return db.query(
       'module_records',
@@ -1831,14 +1858,8 @@ class AppDatabase {
   // Delete a module record.
   Future<int> deleteModuleRecord(int id) async {
     final db = await database;
-    return db.delete(
-      'module_records',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    return db.delete('module_records', where: 'id = ?', whereArgs: [id]);
   }
-
-
 
   Future<int> addSupplier({
     required String name,
@@ -1901,16 +1922,12 @@ class AppDatabase {
     });
   }
 
-  Future<List<Map<String, dynamic>>> getSuppliers({
-    String query = '',
-  }) async {
+  Future<List<Map<String, dynamic>>> getSuppliers({String query = ''}) async {
     final db = await database;
     final q = query.trim();
     return db.query(
       'suppliers',
-      where: q.isEmpty
-          ? null
-          : 'name LIKE ? OR mobile LIKE ? OR company_name LIKE ? OR whatsapp LIKE ?',
+      where: q.isEmpty ? null : 'name LIKE ? OR mobile LIKE ? OR company_name LIKE ? OR whatsapp LIKE ?',
       whereArgs: q.isEmpty ? null : ['%$q%', '%$q%', '%$q%', '%$q%'],
       orderBy: 'name COLLATE NOCASE ASC',
     );
@@ -1984,13 +2001,8 @@ class AppDatabase {
 
   Future<int> deleteSupplier(int id) async {
     final db = await database;
-    return db.delete(
-      'suppliers',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    return db.delete('suppliers', where: 'id = ?', whereArgs: [id]);
   }
-
 
   // Dedicated Expense database functions.
   Future<int> saveExpense({
@@ -2042,16 +2054,21 @@ class AppDatabase {
     }
 
     final db = await database;
-    return db.update('expenses', {
-      'category': category.trim(),
-      'title': title?.trim(),
-      'description': description?.trim(),
-      'amount': amount,
-      'payment_method': paymentMethod?.trim(),
-      'expense_date': expenseDate,
-      'paid_to': paidTo?.trim(),
-      'reference_number': referenceNumber?.trim(),
-    }, where: 'id = ?', whereArgs: [id]);
+    return db.update(
+      'expenses',
+      {
+        'category': category.trim(),
+        'title': title?.trim(),
+        'description': description?.trim(),
+        'amount': amount,
+        'payment_method': paymentMethod?.trim(),
+        'expense_date': expenseDate,
+        'paid_to': paidTo?.trim(),
+        'reference_number': referenceNumber?.trim(),
+      },
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
   Future<List<Map<String, dynamic>>> getExpenses({
@@ -2065,7 +2082,9 @@ class AppDatabase {
     final q = query.trim();
 
     if (q.isNotEmpty) {
-      conditions.add('(title LIKE ? OR category LIKE ? OR description LIKE ? OR paid_to LIKE ? OR reference_number LIKE ?)');
+      conditions.add(
+        '(title LIKE ? OR category LIKE ? OR description LIKE ? OR paid_to LIKE ? OR reference_number LIKE ?)',
+      );
       args.add('%$q%');
       args.add('%$q%');
       args.add('%$q%');
@@ -2093,7 +2112,6 @@ class AppDatabase {
     final db = await database;
     return db.delete('expenses', where: 'id = ?', whereArgs: [id]);
   }
-
 
   Future<List<Map<String, dynamic>>> getCustomerLedger(int customerId) async {
     if (customerId <= 0) throw ArgumentError("Invalid customer ID");
@@ -2132,13 +2150,8 @@ class AppDatabase {
       } else {
         balance -= amount;
       }
-      ledger.add({
-        ...row,
-        "amount": amount,
-        "running_balance": balance,
-      });
+      ledger.add({...row, "amount": amount, "running_balance": balance});
     }
     return ledger;
   }
-
 }

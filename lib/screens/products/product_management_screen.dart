@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
+
 import '../../database/app_database.dart';
 
 class ProductManagementScreen extends StatefulWidget {
@@ -42,10 +43,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
 
   Future<void> loadProducts() async {
     final db = await AppDatabase.instance.database;
-    final result = await db.query(
-      'products',
-      orderBy: 'id DESC',
-    );
+    final result = await db.query('products', orderBy: 'id DESC');
 
     if (!mounted) return;
     setState(() {
@@ -76,8 +74,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
       ...products
           .map((p) => (p['category'] ?? '').toString().trim())
           .where((value) => value.isNotEmpty),
-    }.toList()
-      ..sort();
+    }.toList()..sort();
     return ['All', ...values];
   }
 
@@ -100,7 +97,8 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
       final matchesCategory =
           selectedCategory == 'All' || category == selectedCategory;
 
-      final matchesSearch = q.isEmpty ||
+      final matchesSearch =
+          q.isEmpty ||
           (p['name'] ?? '').toString().toLowerCase().contains(q) ||
           (p['sku'] ?? '').toString().toLowerCase().contains(q) ||
           category.toLowerCase().contains(q);
@@ -115,9 +113,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
   Future<void> openForm({Map<String, dynamic>? product}) async {
     final saved = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(
-        builder: (_) => ProductFormScreen(product: product),
-      ),
+      MaterialPageRoute(builder: (_) => ProductFormScreen(product: product)),
     );
 
     if (saved == true) loadProducts();
@@ -128,9 +124,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Product?'),
-        content: Text(
-          'Are you sure you want to delete "${product['name']}"?',
-        ),
+        content: Text('Are you sure you want to delete "${product['name']}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -176,11 +170,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
       return;
     }
 
-    await db.delete(
-      'products',
-      where: 'id = ?',
-      whereArgs: [product['id']],
-    );
+    await db.delete('products', where: 'id = ?', whereArgs: [product['id']]);
 
     await loadProducts();
 
@@ -308,163 +298,170 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
             child: loading
                 ? const Center(child: CircularProgressIndicator())
                 : list.isEmpty
-                    ? Center(
-                        child: Text(
-                          products.isEmpty
-                              ? 'No products added yet'
-                              : 'No matching products found',
-                          style: const TextStyle(color: Colors.white70),
-                        ),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: loadProducts,
-                        child: ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(14, 0, 14, 90),
-                          itemCount: list.length,
-                          itemBuilder: (context, index) {
-                            final p = list[index];
-                            final quantity = (p['quantity'] as num).toDouble();
-                            final minStock =
-                                (p['min_stock'] as num).toDouble();
+                ? Center(
+                    child: Text(
+                      products.isEmpty
+                          ? 'No products added yet'
+                          : 'No matching products found',
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                  )
+                : RefreshIndicator(
+                    onRefresh: loadProducts,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(14, 0, 14, 90),
+                      itemCount: list.length,
+                      itemBuilder: (context, index) {
+                        final p = list[index];
+                        final quantity = (p['quantity'] as num).toDouble();
+                        final minStock = (p['min_stock'] as num).toDouble();
 
-                            final low = quantity <= minStock;
+                        final low = quantity <= minStock;
 
-                            return Card(
-                              color: const Color(0xFF172337),
-                              margin: const EdgeInsets.only(bottom: 10),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(13),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                        return Card(
+                          color: const Color(0xFF172337),
+                          margin: const EdgeInsets.only(bottom: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(13),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
                                   children: [
-                                    Row(
-                                      children: [
-                                        Builder(
-                                          builder: (_) {
-                                            final photo = (p['image_path'] ?? '').toString();
-                                            final hasPhoto = photo.isNotEmpty &&
-                                                File(photo).existsSync();
-                                            return CircleAvatar(
-                                              radius: 25,
-                                              backgroundColor: const Color(0xFF21443F),
-                                              backgroundImage:
-                                                  hasPhoto ? FileImage(File(photo)) : null,
-                                              child: hasPhoto
-                                                  ? null
-                                                  : const Icon(
-                                                      Icons.inventory_2,
-                                                      color: const Color(0xFF41D6B5),
-                                                    ),
-                                            );
-                                          },
-                                        ),
-                                        const SizedBox(width: 10),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                '${p['name']}',
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 15,
+                                    Builder(
+                                      builder: (_) {
+                                        final photo = (p['image_path'] ?? '')
+                                            .toString();
+                                        final hasPhoto =
+                                            photo.isNotEmpty &&
+                                            File(photo).existsSync();
+                                        return CircleAvatar(
+                                          radius: 25,
+                                          backgroundColor: const Color(
+                                            0xFF21443F,
+                                          ),
+                                          backgroundImage: hasPhoto
+                                              ? FileImage(File(photo))
+                                              : null,
+                                          child: hasPhoto
+                                              ? null
+                                              : const Icon(
+                                                  Icons.inventory_2,
+                                                  color: const Color(
+                                                    0xFF41D6B5,
+                                                  ),
                                                 ),
-                                              ),
-                                              Text(
-                                                '${p['category'] ?? 'Uncategorized'} • SKU: ${p['sku'] ?? '—'}',
-                                                style: const TextStyle(
-                                                  color: Colors.white60,
-                                                  fontSize: 11,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        PopupMenuButton<String>(
-                                          icon: const Icon(
-                                            Icons.more_vert,
-                                            color: Colors.white70,
-                                          ),
-                                          onSelected: (value) {
-                                            if (value == 'edit') {
-                                              openForm(product: p);
-                                            } else if (value == 'delete') {
-                                              deleteProduct(p);
-                                            }
-                                          },
-                                          itemBuilder: (_) => const [
-                                            PopupMenuItem(
-                                              value: 'edit',
-                                              child: Text('Edit Product'),
-                                            ),
-                                            PopupMenuItem(
-                                              value: 'delete',
-                                              child: Text('Delete Product'),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
+                                        );
+                                      },
                                     ),
-                                    const Divider(color: Colors.white12),
-                                    Wrap(
-                                      spacing: 18,
-                                      runSpacing: 8,
-                                      children: [
-                                        _detail('Sale Price', money(p['sale_price'])),
-                                        _detail(
-                                          'Purchase',
-                                          money(p['purchase_price']),
-                                        ),
-                                        _detail(
-                                          'Stock',
-                                          '${quantity.toStringAsFixed(2)} ${p['unit']}',
-                                        ),
-                                      ],
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            '${p['name']}',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 15,
+                                            ),
+                                          ),
+                                          Text(
+                                            '${p['category'] ?? 'Uncategorized'} • SKU: ${p['sku'] ?? '—'}',
+                                            style: const TextStyle(
+                                              color: Colors.white60,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          low
-                                              ? Icons.warning_amber
-                                              : Icons.check_circle,
-                                          size: 15,
-                                          color: low
-                                              ? Colors.orangeAccent
-                                              : accent,
+                                    PopupMenuButton<String>(
+                                      icon: const Icon(
+                                        Icons.more_vert,
+                                        color: Colors.white70,
+                                      ),
+                                      onSelected: (value) {
+                                        if (value == 'edit') {
+                                          openForm(product: p);
+                                        } else if (value == 'delete') {
+                                          deleteProduct(p);
+                                        }
+                                      },
+                                      itemBuilder: (_) => const [
+                                        PopupMenuItem(
+                                          value: 'edit',
+                                          child: Text('Edit Product'),
                                         ),
-                                        const SizedBox(width: 5),
-                                        Text(
-                                          low ? 'Low Stock' : 'In Stock',
-                                          style: TextStyle(
-                                            color: low
-                                                ? Colors.orangeAccent
-                                                : accent,
-                                            fontSize: 11,
-                                          ),
-                                        ),
-                                        const Spacer(),
-                                        Text(
-                                          'Min: ${minStock.toStringAsFixed(2)}',
-                                          style: const TextStyle(
-                                            color: Colors.white54,
-                                            fontSize: 11,
-                                          ),
+                                        PopupMenuItem(
+                                          value: 'delete',
+                                          child: Text('Delete Product'),
                                         ),
                                       ],
                                     ),
                                   ],
                                 ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
+                                const Divider(color: Colors.white12),
+                                Wrap(
+                                  spacing: 18,
+                                  runSpacing: 8,
+                                  children: [
+                                    _detail(
+                                      'Sale Price',
+                                      money(p['sale_price']),
+                                    ),
+                                    _detail(
+                                      'Purchase',
+                                      money(p['purchase_price']),
+                                    ),
+                                    _detail(
+                                      'Stock',
+                                      '${quantity.toStringAsFixed(2)} ${p['unit']}',
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      low
+                                          ? Icons.warning_amber
+                                          : Icons.check_circle,
+                                      size: 15,
+                                      color: low ? Colors.orangeAccent : accent,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      low ? 'Low Stock' : 'In Stock',
+                                      style: TextStyle(
+                                        color: low
+                                            ? Colors.orangeAccent
+                                            : accent,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    Text(
+                                      'Min: ${minStock.toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                        color: Colors.white54,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
           ),
         ],
       ),
@@ -505,6 +502,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   final formKey = GlobalKey<FormState>();
 
   late final TextEditingController name;
+  late final TextEditingController barcode;
   late final TextEditingController sku;
   late final TextEditingController category;
   late final TextEditingController brand;
@@ -532,6 +530,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     imagePath = p?['image_path']?.toString();
 
     name = TextEditingController(text: p?['name']?.toString() ?? '');
+    barcode = TextEditingController(text: p?['barcode']?.toString() ?? '');
     sku = TextEditingController(text: p?['sku']?.toString() ?? '');
     category = TextEditingController(text: p?['category']?.toString() ?? '');
     brand = TextEditingController(text: p?['brand']?.toString() ?? '');
@@ -549,10 +548,10 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       text: p?['purchase_price']?.toString() ?? '',
     );
     sale = TextEditingController(text: p?['sale_price']?.toString() ?? '');
+    purchase.addListener(updateProfitDisplay);
+    sale.addListener(updateProfitDisplay);
     quantity = TextEditingController(text: p?['quantity']?.toString() ?? '0');
-    minStock = TextEditingController(
-      text: p?['min_stock']?.toString() ?? '0',
-    );
+    minStock = TextEditingController(text: p?['min_stock']?.toString() ?? '0');
     unit = TextEditingController(text: p?['unit']?.toString() ?? 'pcs');
     loadSavedUnits();
     loadSavedCategories();
@@ -562,7 +561,8 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   Future<void> retrieveLostProductImage() async {
     try {
       final response = await imagePicker.retrieveLostData();
-      if (response.isEmpty || response.files == null ||
+      if (response.isEmpty ||
+          response.files == null ||
           response.files!.isEmpty) {
         return;
       }
@@ -623,14 +623,10 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     final value = result.trim();
     final db = await AppDatabase.instance.database;
     try {
-      await db.insert(
-        'product_categories',
-        {
-          'name': value,
-          'created_at': DateTime.now().toIso8601String(),
-        },
-        conflictAlgorithm: ConflictAlgorithm.ignore,
-      );
+      await db.insert('product_categories', {
+        'name': value,
+        'created_at': DateTime.now().toIso8601String(),
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
       await loadSavedCategories();
       if (!mounted) return;
 
@@ -640,21 +636,22 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
             (v) => v.toLowerCase() == value.toLowerCase(),
           );
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$value category selected')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('$value category selected')));
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not save category: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Could not save category: $e')));
     }
   }
 
   Future<void> loadSavedUnits() async {
     final db = await AppDatabase.instance.database;
-    final rows = await db.query('measurement_units', orderBy: 'name COLLATE NOCASE');
+    final rows = await db.query(
+      'measurement_units',
+      orderBy: 'name COLLATE NOCASE',
+    );
     if (!mounted) return;
     setState(() {
       savedUnits = rows.map((row) => row['name'].toString()).toList();
@@ -700,28 +697,30 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     final value = result.trim();
     final db = await AppDatabase.instance.database;
 
-    await db.insert(
-      'measurement_units',
-      {
-        'name': value,
-        'created_at': DateTime.now().toIso8601String(),
-      },
-      conflictAlgorithm: ConflictAlgorithm.ignore,
-    );
+    await db.insert('measurement_units', {
+      'name': value,
+      'created_at': DateTime.now().toIso8601String(),
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
 
     await loadSavedUnits();
 
     if (!mounted) return;
     setState(() => unit.text = value);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$value unit saved')),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('$value unit saved')));
+  }
+
+  void updateProfitDisplay() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    purchase.removeListener(updateProfitDisplay);
+    sale.removeListener(updateProfitDisplay);
     name.dispose();
+    barcode.dispose();
     sku.dispose();
     category.dispose();
     brand.dispose();
@@ -804,8 +803,11 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       final found = await db.query(
         'products',
         columns: ['id'],
-        where: 'LOWER(sku) = LOWER(?)',
-        whereArgs: [code],
+        where:
+            'LOWER(TRIM(COALESCE(barcode, '
+            '))) = LOWER(?) OR LOWER(TRIM(COALESCE(sku, '
+            '))) = LOWER(?)',
+        whereArgs: [code, code],
         limit: 1,
       );
       if (found.isEmpty) break;
@@ -813,9 +815,8 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     } while (true);
 
     if (!mounted) return;
-    setState(() => sku.text = code);
+    setState(() => barcode.text = code);
   }
-
 
   Future<void> pickProductImage(ImageSource source) async {
     try {
@@ -829,9 +830,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       await processProductImage(picked);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Photo select nahi ho saki: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Photo select nahi ho saki: $e')));
     }
   }
 
@@ -874,14 +875,15 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       setState(() => imagePath = savedFile.path);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Photo process nahi ho saki: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Photo process nahi ho saki: $e')));
     }
   }
 
   Widget productPhotoSection() {
-    final hasPhoto = imagePath != null &&
+    final hasPhoto =
+        imagePath != null &&
         imagePath!.isNotEmpty &&
         File(imagePath!).existsSync();
 
@@ -963,26 +965,26 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
 
     try {
       final db = await AppDatabase.instance.database;
-      final barcode = sku.text.trim();
-      if (barcode.isNotEmpty) {
+      final barcodeValue = barcode.text.trim();
+      final skuValue = sku.text.trim();
+
+      for (final code in [barcodeValue, skuValue].where((v) => v.isNotEmpty)) {
         final duplicate = await db.query(
           'products',
           columns: ['id'],
           where: widget.product == null
-              ? 'LOWER(sku) = LOWER(?)'
-              : 'LOWER(sku) = LOWER(?) AND id != ?',
+              ? "LOWER(TRIM(COALESCE(barcode, ''))) = LOWER(?) OR LOWER(TRIM(COALESCE(sku, ''))) = LOWER(?)"
+              : "(LOWER(TRIM(COALESCE(barcode, ''))) = LOWER(?) OR LOWER(TRIM(COALESCE(sku, ''))) = LOWER(?)) AND id != ?",
           whereArgs: widget.product == null
-              ? [barcode]
-              : [barcode, widget.product!['id']],
+              ? [code, code]
+              : [code, code, widget.product!['id']],
           limit: 1,
         );
 
         if (duplicate.isNotEmpty) {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('This SKU / Barcode already exists.'),
-            ),
+            SnackBar(content: Text('Barcode / SKU "$code" already exists.')),
           );
           setState(() => saving = false);
           return;
@@ -997,20 +999,18 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       final productId = widget.product?['id'] as int?;
 
       await db.transaction((txn) async {
-        await txn.insert(
-          'measurement_units',
-          {
-            'name': unit.text.trim().isEmpty ? 'pcs' : unit.text.trim(),
-            'created_at': now,
-          },
-          conflictAlgorithm: ConflictAlgorithm.ignore,
-        );
+        await txn.insert('measurement_units', {
+          'name': unit.text.trim().isEmpty ? 'pcs' : unit.text.trim(),
+          'created_at': now,
+        }, conflictAlgorithm: ConflictAlgorithm.ignore);
 
         final values = <String, Object?>{
           'name': name.text.trim(),
+          'barcode': barcode.text.trim().isEmpty ? null : barcode.text.trim(),
           'sku': sku.text.trim().isEmpty ? null : sku.text.trim(),
-          'category':
-              category.text.trim().isEmpty ? null : category.text.trim(),
+          'category': category.text.trim().isEmpty
+              ? null
+              : category.text.trim(),
           'brand': brand.text.trim().isEmpty ? null : brand.text.trim(),
           'purchase_price': double.parse(purchase.text.trim()),
           'sale_price': double.parse(sale.text.trim()),
@@ -1061,282 +1061,416 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not save product: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Could not save product: $e')));
       setState(() => saving = false);
     }
+  }
+
+  Widget formSection(String title, List<Widget> children) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: Color(0xFF172033),
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 14),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget twoFields(Widget first, Widget second) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: first),
+        const SizedBox(width: 12),
+        Expanded(child: second),
+      ],
+    );
+  }
+
+  void resetProductForm() {
+    setState(() {
+      name.clear();
+      barcode.clear();
+      sku.clear();
+      category.clear();
+      brand.clear();
+      purchase.clear();
+      sale.clear();
+      taxPercent.text = '0';
+      description.clear();
+      quantity.text = '0';
+      minStock.text = '0';
+      unit.text = 'pcs';
+      productStatus = 'Active';
+      imagePath = null;
+    });
+  }
+
+  void showProductStatusPreview() {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Product Status Preview'),
+        content: Text(
+          'Product: ${name.text.trim().isEmpty ? 'Not entered' : name.text.trim()}\n'
+          'Status: $productStatus\n'
+          'Purchase Price: Rs. ${purchase.text}\n'
+          'Sale Price: Rs. ${sale.text}\n'
+          'Profit Per Unit: Rs. ${profitPerUnit.toStringAsFixed(2)}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final unitOptions = <String>{
-      'Kg', 'Gram', 'Litre', 'ML', 'Piece',
-      'Packet', 'Dozen', 'Box', 'Plate',
+      'Kg',
+      'Gram',
+      'Litre',
+      'ML',
+      'Piece',
+      'Packet',
+      'Dozen',
+      'Box',
+      'Plate',
       ...savedUnits,
       if (unit.text.trim().isNotEmpty) unit.text.trim(),
     }.toList()..sort();
 
+    InputDecoration dropdownDecoration(String label) => InputDecoration(
+      labelText: label,
+      filled: true,
+      fillColor: const Color(0xFFF8FAFC),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(11),
+        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(11),
+        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+      ),
+    );
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF8FAFC),
-        foregroundColor: Color(0xFF172033),
-        title: Text(editing ? 'Edit Product' : 'Add Product'),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF172033),
+        elevation: 0,
+        title: Text(
+          editing ? 'Edit Product' : 'Add New Product',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       body: Form(
         key: formKey,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            productPhotoSection(),
-            const SizedBox(height: 14),
-            field('Product Name *', name, validator: requiredText),
-            field('Barcode / SKU / Product Code', sku),
-            field('Brand', brand, hint: 'Enter brand name'),
-            Align(
-              alignment: Alignment.centerRight,
-              child: OutlinedButton.icon(
-                onPressed: saving ? null : generateBarcode,
-                icon: const Icon(Icons.qr_code_2),
-                label: const Text('Auto Generate Barcode'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF16A34A),
-                ),
-              ),
-            ),
-            const Text(
-              'Category *',
-              style: TextStyle(
-                color: Color(0xFF172033),
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-              ),
-            ),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              value: savedCategories.contains(category.text.trim())
-                  ? category.text.trim()
-                  : null,
-              dropdownColor: const Color(0xFFF1F5F9),
-              validator: (_) => category.text.trim().isEmpty
-                  ? 'Please select a category'
-                  : null,
-              hint: const Text(
-                'Select Category *',
-                style: TextStyle(color: Color(0xFF64748B)),
-              ),
-              style: const TextStyle(color: Color(0xFF172033)),
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: const Color(0xFFF1F5F9),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(11),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(11),
-                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                ),
-              ),
-              items: savedCategories.map((value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              onChanged: saving
-                  ? null
-                  : (value) {
-                      setState(() => category.text = value ?? '');
-                    },
-            ),
-            const SizedBox(height: 8),
             Row(
               children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: saving ? null : addProductCategory,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add Category'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF16A34A),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  tooltip: 'Clear Category',
-                  onPressed: saving
-                      ? null
-                      : () => setState(() => category.clear()),
-                  icon: const Icon(
-                    Icons.clear,
-                    color: Color(0xFF64748B),
-                  ),
-                ),
-              ],
-            ),
-            DropdownButtonFormField<String>(
-              value: productStatus,
-              decoration: InputDecoration(
-                labelText: 'Product Status',
-                filled: true,
-                fillColor: const Color(0xFFF1F5F9),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(11),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-              items: const [
-                DropdownMenuItem(value: 'Active', child: Text('Active')),
-                DropdownMenuItem(value: 'Inactive', child: Text('Inactive')),
-              ],
-              onChanged: saving
-                  ? null
-                  : (value) => setState(
-                      () => productStatus = value ?? 'Active',
-                    ),
-            ),
-            const SizedBox(height: 14),
-            field(
-              'Purchase Price (Rs.) *',
-              purchase,
-              validator: validNumber,
-              keyboard: const TextInputType.numberWithOptions(decimal: true),
-            ),
-            field(
-              'Sale Price (Rs.) *',
-              sale,
-              validator: validNumber,
-              keyboard: const TextInputType.numberWithOptions(decimal: true),
-            ),
-            field(
-              'Tax (%)',
-              taxPercent,
-              validator: validOptionalNumber,
-              keyboard: const TextInputType.numberWithOptions(decimal: true),
-            ),
-            Container(
-              margin: const EdgeInsets.only(bottom: 14),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: const Color(0xFFECFDF5),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFBBF7D0)),
-              ),
-              child: Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'Profit Per Unit',
-                      style: TextStyle(
-                        color: Color(0xFF166534),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    'Rs. ${profitPerUnit.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      color: Color(0xFF15803D),
+                const Expanded(
+                  child: Text(
+                    'Add New Product',
+                    style: TextStyle(
+                      fontSize: 21,
                       fontWeight: FontWeight.bold,
+                      color: Color(0xFF172033),
                     ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDCFCE7),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    'New Product',
+                    style: TextStyle(
+                      color: Color(0xFF15803D),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            formSection('Product Information', [
+              field('Product Name *', name, validator: requiredText),
+              twoFields(
+                field('Barcode', barcode),
+                field('SKU / Product Code', sku),
+              ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: OutlinedButton.icon(
+                    onPressed: saving ? null : generateBarcode,
+                    icon: const Icon(Icons.qr_code_2),
+                    label: const Text('Auto Generate Barcode'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF15803D),
+                    ),
+                  ),
+                ),
+              ),
+              twoFields(
+                DropdownButtonFormField<String>(
+                  value: savedCategories.contains(category.text.trim())
+                      ? category.text.trim()
+                      : null,
+                  decoration: dropdownDecoration('Category *'),
+                  hint: const Text('Select Category'),
+                  validator: (_) => category.text.trim().isEmpty
+                      ? 'Please select a category'
+                      : null,
+                  items: savedCategories
+                      .map((v) => DropdownMenuItem(value: v, child: Text(v)))
+                      .toList(),
+                  onChanged: saving
+                      ? null
+                      : (v) => setState(() => category.text = v ?? ''),
+                ),
+                field('Brand', brand, hint: 'Enter brand name'),
+              ),
+              Row(
+                children: [
+                  TextButton.icon(
+                    onPressed: saving ? null : addProductCategory,
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Add Category'),
+                  ),
+                  TextButton(
+                    onPressed: saving
+                        ? null
+                        : () => setState(() => category.clear()),
+                    child: const Text('Clear'),
                   ),
                 ],
               ),
-            ),
-            field(
-              'Opening / Current Stock *',
-              quantity,
-              validator: validNumber,
-              keyboard: const TextInputType.numberWithOptions(decimal: true),
-            ),
-            field(
-              'Minimum Stock Alert *',
-              minStock,
-              validator: validNumber,
-              keyboard: const TextInputType.numberWithOptions(decimal: true),
-            ),
-            const Text(
-              'Measurement Unit',
-              style: TextStyle(
-                color: Color(0xFF172033),
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: unitOptions.map((value) {
-                final selected = unit.text.trim().toLowerCase() ==
-                    value.toLowerCase();
-                return ChoiceChip(
-                  label: Text(value),
-                  selected: selected,
-                  onSelected: saving
+              twoFields(
+                DropdownButtonFormField<String>(
+                  value: unitOptions.contains(unit.text) ? unit.text : null,
+                  decoration: dropdownDecoration('Unit *'),
+                  items: unitOptions
+                      .map((v) => DropdownMenuItem(value: v, child: Text(v)))
+                      .toList(),
+                  onChanged: saving
                       ? null
-                      : (_) => setState(() => unit.text = value),
-                  selectedColor: const Color(0xFF16A34A),
-                  backgroundColor: const Color(0xFFF1F5F9),
-                  labelStyle: TextStyle(
-                    color: selected
-                        ? const Color(0xFFF8FAFC)
-                        : Color(0xFF172033),
-                    fontWeight: FontWeight.w600,
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: OutlinedButton.icon(
-                onPressed: saving ? null : addCustomUnit,
-                icon: const Icon(Icons.add),
-                label: const Text('Add Custom Unit'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF16A34A),
+                      : (v) => setState(() => unit.text = v ?? 'pcs'),
+                ),
+                DropdownButtonFormField<String>(
+                  value: productStatus,
+                  decoration: dropdownDecoration('Product Status'),
+                  items: const [
+                    DropdownMenuItem(value: 'Active', child: Text('Active')),
+                    DropdownMenuItem(
+                      value: 'Inactive',
+                      child: Text('Inactive'),
+                    ),
+                  ],
+                  onChanged: saving
+                      ? null
+                      : (v) => setState(() => productStatus = v ?? 'Active'),
                 ),
               ),
-            ),
-            const SizedBox(height: 8),
-            field('Custom Unit / Edit Selected Unit', unit,
-                hint: 'e.g. Tray, Glass, Serving'),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: saving ? null : addCustomUnit,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Add Custom Unit'),
+                ),
+              ),
+            ]),
 
-            const SizedBox(height: 12),
-            field(
-              'Product Description',
-              description,
-              hint: 'Enter product details (optional)',
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 50,
-              child: FilledButton.icon(
-                onPressed: saving ? null : saveProduct,
-                icon: saving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.save),
-                label: Text(saving ? 'Saving...' : 'Add Product'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF16A34A),
-                  foregroundColor: const Color(0xFFF8FAFC),
+            formSection('Pricing Information', [
+              twoFields(
+                field(
+                  'Purchase Price (Rs.) *',
+                  purchase,
+                  validator: validNumber,
+                  keyboard: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                ),
+                field(
+                  'Sale Price (Rs.) *',
+                  sale,
+                  validator: validNumber,
+                  keyboard: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                 ),
               ),
+              twoFields(
+                field(
+                  'Tax (%)',
+                  taxPercent,
+                  validator: validOptionalNumber,
+                  keyboard: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                ),
+                Container(
+                  margin: const EdgeInsets.only(bottom: 13),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 17,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFECFDF5),
+                    borderRadius: BorderRadius.circular(11),
+                    border: Border.all(color: const Color(0xFFBBF7D0)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Profit Per Unit',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF166534),
+                        ),
+                      ),
+                      const SizedBox(height: 7),
+                      Text(
+                        'Rs. ${profitPerUnit.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF15803D),
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ]),
+
+            formSection('Stock Information', [
+              twoFields(
+                field(
+                  'Opening Stock *',
+                  quantity,
+                  validator: validNumber,
+                  keyboard: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                ),
+                field(
+                  'Low Stock Alert',
+                  minStock,
+                  validator: validOptionalNumber,
+                  keyboard: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                ),
+              ),
+            ]),
+
+            formSection('Additional Details', [
+              field(
+                'Product Description',
+                description,
+                hint: 'Enter product details (optional)',
+              ),
+            ]),
+
+            formSection('Product Image', [productPhotoSection()]),
+
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: saving ? null : resetProductForm,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      foregroundColor: const Color(0xFF172033),
+                    ),
+                    child: const Text('Reset'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: showProductStatusPreview,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      foregroundColor: const Color(0xFF172033),
+                    ),
+                    child: const Text('Preview Status'),
+                  ),
+                ),
+              ],
             ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 52,
+              child: FilledButton(
+                onPressed: saving ? null : saveProduct,
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF111827),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: saving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        editing ? 'Update Product' : 'Add Product',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+              ),
+            ),
+            const SizedBox(height: 20),
           ],
         ),
       ),
     );
   }
 }
-
 
 class ProductCategoryManagementScreen extends StatefulWidget {
   const ProductCategoryManagementScreen({super.key});
@@ -1375,9 +1509,7 @@ class _ProductCategoryManagementScreenState
   }
 
   Future<void> editCategory(Map<String, dynamic> item) async {
-    final controller = TextEditingController(
-      text: item['name'].toString(),
-    );
+    final controller = TextEditingController(text: item['name'].toString());
     final result = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -1435,7 +1567,9 @@ class _ProductCategoryManagementScreenState
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Category name already exists or update failed: $e')),
+        SnackBar(
+          content: Text('Category name already exists or update failed: $e'),
+        ),
       );
     }
   }
@@ -1476,14 +1610,10 @@ class _ProductCategoryManagementScreenState
     if (result == null || result.trim().isEmpty) return;
     final db = await AppDatabase.instance.database;
     try {
-      final id = await db.insert(
-        'product_categories',
-        {
-          'name': result.trim(),
-          'created_at': DateTime.now().toIso8601String(),
-        },
-        conflictAlgorithm: ConflictAlgorithm.ignore,
-      );
+      final id = await db.insert('product_categories', {
+        'name': result.trim(),
+        'created_at': DateTime.now().toIso8601String(),
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
       await loadCategories();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1495,9 +1625,8 @@ class _ProductCategoryManagementScreenState
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not add category: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Could not add category: $e')));
     }
   }
 
@@ -1568,58 +1697,55 @@ class _ProductCategoryManagementScreenState
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : categories.isEmpty
-              ? const Center(
-                  child: Text(
-                    'No categories yet. Add your first category.',
-                    style: TextStyle(color: Colors.white70),
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 90),
-                  itemCount: categories.length,
-                  itemBuilder: (context, index) {
-                    final item = categories[index];
-                    return Card(
-                      color: const Color(0xFF172337),
-                      child: ListTile(
-                        leading: const CircleAvatar(
-                          backgroundColor: Color(0xFF21443F),
-                          child: Icon(Icons.category, color: accent),
-                        ),
-                        title: Text(
-                          item['name'].toString(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        trailing: PopupMenuButton<String>(
-                          icon: const Icon(
-                            Icons.more_vert,
-                            color: Colors.white70,
-                          ),
-                          onSelected: (value) {
-                            if (value == 'edit') {
-                              editCategory(item);
-                            } else if (value == 'delete') {
-                              deleteCategory(item);
-                            }
-                          },
-                          itemBuilder: (_) => const [
-                            PopupMenuItem(
-                              value: 'edit',
-                              child: Text('Edit Category'),
-                            ),
-                            PopupMenuItem(
-                              value: 'delete',
-                              child: Text('Delete Category'),
-                            ),
-                          ],
-                        ),
+          ? const Center(
+              child: Text(
+                'No categories yet. Add your first category.',
+                style: TextStyle(color: Colors.white70),
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 90),
+              itemCount: categories.length,
+              itemBuilder: (context, index) {
+                final item = categories[index];
+                return Card(
+                  color: const Color(0xFF172337),
+                  child: ListTile(
+                    leading: const CircleAvatar(
+                      backgroundColor: Color(0xFF21443F),
+                      child: Icon(Icons.category, color: accent),
+                    ),
+                    title: Text(
+                      item['name'].toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
                       ),
-                    );
-                  },
-                ),
+                    ),
+                    trailing: PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert, color: Colors.white70),
+                      onSelected: (value) {
+                        if (value == 'edit') {
+                          editCategory(item);
+                        } else if (value == 'delete') {
+                          deleteCategory(item);
+                        }
+                      },
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(
+                          value: 'edit',
+                          child: Text('Edit Category'),
+                        ),
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Text('Delete Category'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
     );
   }
 }
