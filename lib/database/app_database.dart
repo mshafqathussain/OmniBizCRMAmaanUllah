@@ -17,7 +17,7 @@ class AppDatabase {
 
     _database = await openDatabase(
       path,
-      version: 13,
+      version: 14,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
@@ -47,8 +47,12 @@ class AppDatabase {
             name TEXT NOT NULL,
             sku TEXT,
             category TEXT,
+            brand TEXT,
             purchase_price REAL NOT NULL DEFAULT 0,
             sale_price REAL NOT NULL DEFAULT 0,
+            tax_percent REAL NOT NULL DEFAULT 0,
+            status TEXT NOT NULL DEFAULT 'Active',
+            description TEXT,
             quantity REAL NOT NULL DEFAULT 0,
             min_stock REAL NOT NULL DEFAULT 0,
             unit TEXT NOT NULL DEFAULT 'pcs',
@@ -591,6 +595,13 @@ class AppDatabase {
 
         if (oldVersion < 13) {
           await db.execute('ALTER TABLE expenses ADD COLUMN title TEXT');
+        }
+
+        if (oldVersion < 14) {
+          await db.execute('ALTER TABLE products ADD COLUMN brand TEXT');
+          await db.execute('ALTER TABLE products ADD COLUMN tax_percent REAL NOT NULL DEFAULT 0');
+          await db.execute("ALTER TABLE products ADD COLUMN status TEXT NOT NULL DEFAULT 'Active'");
+          await db.execute('ALTER TABLE products ADD COLUMN description TEXT');
         }
 
       },

@@ -507,8 +507,12 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   late final TextEditingController name;
   late final TextEditingController sku;
   late final TextEditingController category;
+  late final TextEditingController brand;
   late final TextEditingController purchase;
   late final TextEditingController sale;
+  late final TextEditingController taxPercent;
+  late final TextEditingController description;
+  String productStatus = 'Active';
   late final TextEditingController quantity;
   late final TextEditingController minStock;
   late final TextEditingController unit;
@@ -530,6 +534,17 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     name = TextEditingController(text: p?['name']?.toString() ?? '');
     sku = TextEditingController(text: p?['sku']?.toString() ?? '');
     category = TextEditingController(text: p?['category']?.toString() ?? '');
+    brand = TextEditingController(text: p?['brand']?.toString() ?? '');
+    taxPercent = TextEditingController(
+      text: p?['tax_percent']?.toString() ?? '0',
+    );
+    description = TextEditingController(
+      text: p?['description']?.toString() ?? '',
+    );
+    productStatus = p?['status']?.toString() ?? 'Active';
+    if (!['Active', 'Inactive'].contains(productStatus)) {
+      productStatus = 'Active';
+    }
     purchase = TextEditingController(
       text: p?['purchase_price']?.toString() ?? '',
     );
@@ -709,8 +724,11 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     name.dispose();
     sku.dispose();
     category.dispose();
+    brand.dispose();
     purchase.dispose();
     sale.dispose();
+    taxPercent.dispose();
+    description.dispose();
     quantity.dispose();
     minStock.dispose();
     unit.dispose();
@@ -741,24 +759,40 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         controller: controller,
         validator: validator,
         keyboardType: keyboard,
-        style: const TextStyle(color: Colors.white),
+        style: const TextStyle(color: Color(0xFF172033)),
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,
-          labelStyle: const TextStyle(color: Colors.white70),
-          hintStyle: const TextStyle(color: Colors.white38),
+          labelStyle: const TextStyle(color: Color(0xFF64748B)),
+          hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
           filled: true,
-          fillColor: const Color(0xFF172337),
+          fillColor: const Color(0xFFF1F5F9),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(11),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(11),
-            borderSide: const BorderSide(color: Color(0xFF334155)),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFF16A34A)),
           ),
         ),
       ),
     );
+  }
+
+  double get profitPerUnit {
+    final buy = double.tryParse(purchase.text.trim()) ?? 0;
+    final sell = double.tryParse(sale.text.trim()) ?? 0;
+    return sell - buy;
+  }
+
+  String? validOptionalNumber(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    return validNumber(value);
   }
 
   Future<void> generateBarcode() async {
@@ -855,9 +889,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF172337),
+        color: const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white12),
+        border: Border.all(color: Color(0x1F172033)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -865,7 +899,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
           const Text(
             'Product Photo',
             style: TextStyle(
-              color: Colors.white,
+              color: Color(0xFF172033),
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -977,8 +1011,16 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
           'sku': sku.text.trim().isEmpty ? null : sku.text.trim(),
           'category':
               category.text.trim().isEmpty ? null : category.text.trim(),
+          'brand': brand.text.trim().isEmpty ? null : brand.text.trim(),
           'purchase_price': double.parse(purchase.text.trim()),
           'sale_price': double.parse(sale.text.trim()),
+          'tax_percent': taxPercent.text.trim().isEmpty
+              ? 0.0
+              : double.parse(taxPercent.text.trim()),
+          'status': productStatus,
+          'description': description.text.trim().isEmpty
+              ? null
+              : description.text.trim(),
           'quantity': newQuantity,
           'min_stock': double.parse(minStock.text.trim()),
           'unit': unit.text.trim().isEmpty ? 'pcs' : unit.text.trim(),
@@ -1036,10 +1078,10 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     }.toList()..sort();
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0B1220),
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0B1220),
-        foregroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF8FAFC),
+        foregroundColor: Color(0xFF172033),
         title: Text(editing ? 'Edit Product' : 'Add Product'),
       ),
       body: Form(
@@ -1050,7 +1092,8 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
             productPhotoSection(),
             const SizedBox(height: 14),
             field('Product Name *', name, validator: requiredText),
-            field('SKU / Barcode', sku),
+            field('Barcode / SKU / Product Code', sku),
+            field('Brand', brand, hint: 'Enter brand name'),
             Align(
               alignment: Alignment.centerRight,
               child: OutlinedButton.icon(
@@ -1058,14 +1101,14 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                 icon: const Icon(Icons.qr_code_2),
                 label: const Text('Auto Generate Barcode'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF41D6B5),
+                  foregroundColor: const Color(0xFF16A34A),
                 ),
               ),
             ),
             const Text(
-              'Product Category',
+              'Category *',
               style: TextStyle(
-                color: Colors.white,
+                color: Color(0xFF172033),
                 fontWeight: FontWeight.bold,
                 fontSize: 15,
               ),
@@ -1075,21 +1118,24 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
               value: savedCategories.contains(category.text.trim())
                   ? category.text.trim()
                   : null,
-              dropdownColor: const Color(0xFF172337),
+              dropdownColor: const Color(0xFFF1F5F9),
+              validator: (_) => category.text.trim().isEmpty
+                  ? 'Please select a category'
+                  : null,
               hint: const Text(
-                'Select Category (optional)',
-                style: TextStyle(color: Colors.white54),
+                'Select Category *',
+                style: TextStyle(color: Color(0xFF64748B)),
               ),
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: Color(0xFF172033)),
               decoration: InputDecoration(
                 filled: true,
-                fillColor: const Color(0xFF172337),
+                fillColor: const Color(0xFFF1F5F9),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(11),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(11),
-                  borderSide: const BorderSide(color: Color(0xFF334155)),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                 ),
               ),
               items: savedCategories.map((value) {
@@ -1113,7 +1159,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                     icon: const Icon(Icons.add),
                     label: const Text('Add Category'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF41D6B5),
+                      foregroundColor: const Color(0xFF16A34A),
                     ),
                   ),
                 ),
@@ -1125,11 +1171,33 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                       : () => setState(() => category.clear()),
                   icon: const Icon(
                     Icons.clear,
-                    color: Colors.white70,
+                    color: Color(0xFF64748B),
                   ),
                 ),
               ],
             ),
+            DropdownButtonFormField<String>(
+              value: productStatus,
+              decoration: InputDecoration(
+                labelText: 'Product Status',
+                filled: true,
+                fillColor: const Color(0xFFF1F5F9),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(11),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              items: const [
+                DropdownMenuItem(value: 'Active', child: Text('Active')),
+                DropdownMenuItem(value: 'Inactive', child: Text('Inactive')),
+              ],
+              onChanged: saving
+                  ? null
+                  : (value) => setState(
+                      () => productStatus = value ?? 'Active',
+                    ),
+            ),
+            const SizedBox(height: 14),
             field(
               'Purchase Price (Rs.) *',
               purchase,
@@ -1141,6 +1209,41 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
               sale,
               validator: validNumber,
               keyboard: const TextInputType.numberWithOptions(decimal: true),
+            ),
+            field(
+              'Tax (%)',
+              taxPercent,
+              validator: validOptionalNumber,
+              keyboard: const TextInputType.numberWithOptions(decimal: true),
+            ),
+            Container(
+              margin: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFECFDF5),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFBBF7D0)),
+              ),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Profit Per Unit',
+                      style: TextStyle(
+                        color: Color(0xFF166534),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    'Rs. ${profitPerUnit.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      color: Color(0xFF15803D),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
             ),
             field(
               'Opening / Current Stock *',
@@ -1157,7 +1260,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
             const Text(
               'Measurement Unit',
               style: TextStyle(
-                color: Colors.white,
+                color: Color(0xFF172033),
                 fontWeight: FontWeight.bold,
                 fontSize: 15,
               ),
@@ -1175,12 +1278,12 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                   onSelected: saving
                       ? null
                       : (_) => setState(() => unit.text = value),
-                  selectedColor: const Color(0xFF41D6B5),
-                  backgroundColor: const Color(0xFF172337),
+                  selectedColor: const Color(0xFF16A34A),
+                  backgroundColor: const Color(0xFFF1F5F9),
                   labelStyle: TextStyle(
                     color: selected
-                        ? const Color(0xFF0B1220)
-                        : Colors.white,
+                        ? const Color(0xFFF8FAFC)
+                        : Color(0xFF172033),
                     fontWeight: FontWeight.w600,
                   ),
                 );
@@ -1194,7 +1297,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                 icon: const Icon(Icons.add),
                 label: const Text('Add Custom Unit'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF41D6B5),
+                  foregroundColor: const Color(0xFF16A34A),
                 ),
               ),
             ),
@@ -1202,6 +1305,12 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
             field('Custom Unit / Edit Selected Unit', unit,
                 hint: 'e.g. Tray, Glass, Serving'),
 
+            const SizedBox(height: 12),
+            field(
+              'Product Description',
+              description,
+              hint: 'Enter product details (optional)',
+            ),
             const SizedBox(height: 8),
             SizedBox(
               height: 50,
@@ -1214,10 +1323,10 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.save),
-                label: Text(saving ? 'Saving...' : 'Save Product'),
+                label: Text(saving ? 'Saving...' : 'Add Product'),
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF41D6B5),
-                  foregroundColor: const Color(0xFF0B1220),
+                  backgroundColor: const Color(0xFF16A34A),
+                  foregroundColor: const Color(0xFFF8FAFC),
                 ),
               ),
             ),
