@@ -452,22 +452,22 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
 
   Widget _section(String title, Widget child) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFE5E7EB)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title, style: const TextStyle(
-            fontSize: 16,
+            fontSize: 14,
             fontWeight: FontWeight.bold,
             color: Color(0xFF111827),
           )),
-          const SizedBox(height: 14),
+          const SizedBox(height: 8),
           child,
         ],
       ),
@@ -484,7 +484,7 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
         prefixText: 'Rs. ',
         filled: true,
         fillColor: const Color(0xFFF9FAFB),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -551,7 +551,7 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
           style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(10),
         children: [
           Row(
             children: [
@@ -568,7 +568,7 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                 decoration: BoxDecoration(
                   color: const Color(0xFFDCFCE7),
                   borderRadius: BorderRadius.circular(30),
@@ -579,7 +579,7 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
 
           Row(
             children: [
@@ -587,11 +587,11 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
                 lastGeneratedSaleDetails == null
                     ? 'Generated on save'
                     : lastGeneratedSaleDetails!['sale']['bill_number'].toString())),
-              const SizedBox(width: 10),
+              const SizedBox(width: 6),
               Expanded(child: _infoCard('Sale Date', dateText)),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
 
           _section('1. Customer Details', Column(
             children: [
@@ -639,7 +639,7 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
                     icon: const Icon(Icons.person_add_alt_1),
                     label: const Text('Add New Customer'),
                   )),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 5),
                   Expanded(child: OutlinedButton.icon(
                     onPressed: selectedCustomer == null
                         ? null
@@ -678,7 +678,7 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                   )),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 5),
                   OutlinedButton(
                     onPressed: () {
                       if (_barcodeController.text.trim().isNotEmpty) {
@@ -691,7 +691,7 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 8),
               TextField(
                 controller: _productSearch,
                 onChanged: _searchProducts,
@@ -701,7 +701,7 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 6),
               Wrap(
                 spacing: 7,
                 children: saleCategories.map((category) => ChoiceChip(
@@ -744,7 +744,7 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
                     final price = item['price'] as double;
                     return Container(
                       margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         border: Border.all(color: const Color(0xFFE5E7EB)),
                         borderRadius: BorderRadius.circular(12),
@@ -786,12 +786,12 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
             children: [
               Row(children: [
                 Expanded(child: _moneyField('Item / Bill Discount (Rs.)', _discount)),
-                const SizedBox(width: 10),
+                const SizedBox(width: 6),
                 Expanded(child: _moneyField('Tax (Rs.)', _tax)),
               ]),
-              const SizedBox(height: 14),
+              const SizedBox(height: 8),
               Container(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(9),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF3F4F6),
                   borderRadius: BorderRadius.circular(12),
@@ -810,50 +810,51 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
           _section('5. Payment Details', Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ...['Cash', 'Bank Transfer', 'Raast', 'JazzCash', 'Easypaisa',
-                'Credit / Khata (Udhar)', 'Partial Payment'].map((option) {
-                final selected = option == 'Credit / Khata (Udhar)'
-                    ? paymentType == 'Udhaar'
-                    : option == 'Partial Payment'
-                        ? paymentType == 'Partial'
-                        : paymentType == 'Cash' && paymentMethod == option;
-                return RadioListTile<String>(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  value: option,
-                  groupValue: paymentType == 'Udhaar'
-                      ? 'Credit / Khata (Udhar)'
-                      : paymentType == 'Partial'
-                          ? 'Partial Payment'
-                          : paymentMethod,
-                  title: Text(option),
-                  onChanged: (value) {
-                    if (value == null) return;
-                    if (value == 'Credit / Khata (Udhar)') {
-                      _selectPaymentType('Udhaar');
-                    } else if (value == 'Partial Payment') {
-                      _selectPaymentType('Partial');
-                    } else {
-                      setState(() {
-                        paymentType = 'Cash';
-                        paymentMethod = value;
-                        _paid.text = total.toStringAsFixed(2);
-                      });
-                    }
-                  },
-                );
-              }),
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: ['Cash', 'Bank Transfer', 'Raast', 'JazzCash', 'Easypaisa',
+                  'Credit / Khata (Udhar)', 'Partial Payment'].map((option) {
+                  final selected = option == 'Credit / Khata (Udhar)'
+                      ? paymentType == 'Udhaar'
+                      : option == 'Partial Payment'
+                          ? paymentType == 'Partial'
+                          : paymentType == 'Cash' && paymentMethod == option;
+
+                  return ChoiceChip(
+                    label: Text(option, style: const TextStyle(fontSize: 12)),
+                    selected: selected,
+                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
+                    onSelected: (value) {
+                      if (!value) return;
+                      if (option == 'Credit / Khata (Udhar)') {
+                        _selectPaymentType('Udhaar');
+                      } else if (option == 'Partial Payment') {
+                        _selectPaymentType('Partial');
+                      } else {
+                        setState(() {
+                          paymentType = 'Cash';
+                          paymentMethod = option;
+                          _paid.text = total.toStringAsFixed(2);
+                        });
+                      }
+                    },
+                  );
+                }).toList(),
+              ),
               if (paymentType == 'Partial') ...[
                 const SizedBox(height: 8),
                 _moneyField('Amount Received (Rs.)', _paid),
               ],
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               Row(children: [
                 Expanded(child: _infoCard('Received', _rs(paid))),
-                const SizedBox(width: 10),
+                const SizedBox(width: 6),
                 Expanded(child: _infoCard('Remaining Balance', _rs(remaining))),
               ]),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               Row(children: [
                 const Text('Payment Status: '),
                 Container(
@@ -886,7 +887,7 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: 'None',
                 decoration: InputDecoration(
@@ -905,7 +906,7 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               SizedBox(
-                height: 52,
+                height: 40,
                 child: FilledButton.icon(
                   onPressed: saving ? null : _saveSale,
                   style: FilledButton.styleFrom(
@@ -922,11 +923,11 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
                 ),
               ),
               if (lastGeneratedSaleDetails != null) ...[
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
                 Text('Invoice: ${lastGeneratedSaleDetails!['sale']['bill_number']}',
                   style: const TextStyle(fontWeight: FontWeight.bold)),
               ],
-              const SizedBox(height: 10),
+              const SizedBox(height: 6),
               Row(children: [
                 Expanded(child: OutlinedButton.icon(
                   onPressed: lastGeneratedSaleDetails == null
@@ -934,7 +935,7 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
                   icon: const Icon(Icons.visibility),
                   label: const Text('Preview Invoice'),
                 )),
-                const SizedBox(width: 8),
+                const SizedBox(width: 5),
                 Expanded(child: OutlinedButton.icon(
                   onPressed: lastGeneratedSaleDetails == null ? null : _printInvoice,
                   icon: const Icon(Icons.print),
@@ -947,14 +948,14 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
                   icon: const Icon(Icons.picture_as_pdf),
                   label: const Text('Export PDF'),
                 )),
-                const SizedBox(width: 8),
+                const SizedBox(width: 5),
                 Expanded(child: OutlinedButton.icon(
                   onPressed: lastGeneratedSaleDetails == null ? null : _sendWhatsAppBill,
                   icon: const Icon(Icons.chat),
                   label: const Text('WhatsApp'),
                 )),
               ]),
-              const SizedBox(height: 10),
+              const SizedBox(height: 6),
               OutlinedButton.icon(
                 onPressed: () => setState(() {
                   cart.clear();
@@ -988,7 +989,7 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
 
   Widget _infoCard(String label, String value) {
     return Container(
-      padding: const EdgeInsets.all(13),
+      padding: const EdgeInsets.all(9),
       decoration: BoxDecoration(
         color: const Color(0xFFF3F4F6),
         borderRadius: BorderRadius.circular(12),
