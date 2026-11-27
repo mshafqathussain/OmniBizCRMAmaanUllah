@@ -81,8 +81,8 @@ class _ModuleEntryScreenState extends State<ModuleEntryScreen> {
     ],
     'Khata': [
       'Account Title', 'Customer / Supplier Name', 'Mobile Number',
-      'Transaction Date', 'Previous Balance', 'Jama Amount',
-      'Udhar Amount', 'Description', 'Notes'
+      'Transaction Date', 'Previous Balance', 'Amount Received',
+      'Credit Amount', 'Description', 'Notes'
     ],
     'Baqaya Udhaar': [
       'Customer Name', 'Mobile Number', 'Invoice Number',
@@ -304,7 +304,7 @@ class _ModuleEntryScreenState extends State<ModuleEntryScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => loading = false);
-      showMessage('Records load nahi ho sake: $e');
+      showMessage('Records could not be loaded: $e');
     }
   }
 
@@ -377,7 +377,7 @@ class _ModuleEntryScreenState extends State<ModuleEntryScreen> {
           return;
         }
         if (!expenseAmount.isFinite || expenseAmount <= 0) {
-          showMessage('Expense amount sahi enter karein.');
+          showMessage('Please enter a valid expense amount.');
           return;
         }
 
@@ -405,7 +405,7 @@ class _ModuleEntryScreenState extends State<ModuleEntryScreen> {
             paidTo: values['paidTo'] as String?,
             referenceNumber: values['referenceNumber'] as String?,
           );
-          showMessage('Expense successfully save ho gaya.');
+          showMessage('Expense saved successfully.');
         } else if (editingDedicatedExpense) {
           await AppDatabase.instance.updateExpense(
             id: editingId!,
@@ -418,7 +418,7 @@ class _ModuleEntryScreenState extends State<ModuleEntryScreen> {
             paidTo: values['paidTo'] as String?,
             referenceNumber: values['referenceNumber'] as String?,
           );
-          showMessage('Expense update ho gaya.');
+          showMessage('Expense updated successfully.');
         } else {
           await AppDatabase.instance.updateModuleRecord(
             id: editingId!,
@@ -431,7 +431,7 @@ class _ModuleEntryScreenState extends State<ModuleEntryScreen> {
                 ? DateTime.now().toIso8601String()
                 : date,
           );
-          showMessage('Purana Expense record update ho gaya.');
+          showMessage('Previous expense record updated successfully.');
         }
       } else if (editingId == null) {
         await AppDatabase.instance.saveModuleRecord(
@@ -444,7 +444,7 @@ class _ModuleEntryScreenState extends State<ModuleEntryScreen> {
               ? DateTime.now().toIso8601String()
               : date,
         );
-        showMessage('Record successfully save ho gaya.');
+        showMessage('Record saved successfully.');
       } else {
         await AppDatabase.instance.updateModuleRecord(
           id: editingId!,
@@ -457,13 +457,13 @@ class _ModuleEntryScreenState extends State<ModuleEntryScreen> {
               ? DateTime.now().toIso8601String()
               : date,
         );
-        showMessage('Record update ho gaya.');
+        showMessage('Record updated successfully.');
       }
 
       clearForm();
       await loadRecords();
     } catch (e) {
-      showMessage('Save nahi ho saka: $e');
+      showMessage('Could not save: $e');
     }
   }
 
@@ -486,7 +486,7 @@ class _ModuleEntryScreenState extends State<ModuleEntryScreen> {
         const SnackBar(content: Text('Record edit mode mein hai.')),
       );
     } catch (e) {
-      showMessage('Record open nahi ho saka: $e');
+      showMessage('Could not open record: $e');
     }
   }
 
@@ -525,7 +525,7 @@ class _ModuleEntryScreenState extends State<ModuleEntryScreen> {
       clearForm();
     }
     await loadRecords();
-    showMessage('Record delete ho gaya.');
+    showMessage('Record deleted successfully.');
   }
 
   @override
@@ -692,14 +692,12 @@ class _ModuleEntryScreenState extends State<ModuleEntryScreen> {
             const Card(
               child: Padding(
                 padding: EdgeInsets.all(20),
-                child: Center(child: Text('Abhi koi record mojood nahi.')),
+                child: Center(child: Text('No records available yet.')),
               ),
             )
           else
             ...filteredRecords.map((record) {
               final title = record['title']?.toString() ?? 'Record';
-              final amount = (record['amount'] as num?)?.toDouble() ?? 0;
-              final recordStatus = record['status']?.toString() ?? 'Saved';
 
               return Card(
                 child: ListTile(

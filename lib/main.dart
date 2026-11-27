@@ -66,48 +66,144 @@ class AppModule {
   final List<String> options;
 
   const AppModule(this.name, this.category, this.icon, this.options);
+
+  String get displayName =>
+      const {
+        'Khata': 'Ledger',
+        'Baqaya Udhaar': 'Outstanding Credit',
+        'Jama Raqam & Udhar Dein': 'Payment Collection & Credit',
+      }[name] ??
+      name;
+
+  String get displayCategory => category;
+
+  String displayOption(String option) =>
+      const {
+        'Naya Khata': 'New Ledger',
+        'Khata List': 'Ledger List',
+        'Customer Khata': 'Customer Ledger',
+        'Supplier Khata': 'Supplier Ledger',
+        'Jama Raqam': 'Amount Received',
+        'Udhar Dein': 'Give Credit',
+        'Khata Report': 'Ledger Report',
+      }[option] ??
+      option;
 }
 
 const modules = <AppModule>[
-  AppModule('Dashboard', 'Home', Icons.dashboard, ['Business Overview', 'Today Summary', 'Quick Actions']),
-  AppModule('New Sale', 'Sales', Icons.point_of_sale, ['Create New Sale', 'Sale History', 'Sale Details', 'Payment Received']),
-  AppModule('Sales Return', 'Sales', Icons.assignment_return, ['New Sales Return', 'Return History', 'Refund Details']),
-  AppModule('Orders & Quotations', 'Sales', Icons.request_quote, ['New Order', 'Order List', 'Create Quotation', 'Quotation History']),
-  AppModule('Products', 'Stock', Icons.inventory_2, ['Add Product', 'Product List', 'Edit Product', 'Product Categories', 'Product Barcode']),
-  AppModule('Customers', 'People', Icons.people, ['Add Customer', 'Customer List', 'Customer Details', 'Customer Ledger']),
-  AppModule('Khata', 'Accounts', Icons.menu_book, ['Naya Khata', 'Khata List', 'Customer Khata', 'Supplier Khata']),
-  AppModule('Baqaya Udhaar', 'Accounts', Icons.account_balance_wallet, ['Total Remaining Amount', 'Customer Wise Balance', 'Receive Payment']),
-  AppModule('Jama Raqam & Udhar Dein', 'Accounts', Icons.currency_exchange, ['Jama Raqam', 'Udhar Dein', 'Payment History']),
-  AppModule('Expenses', 'Accounts', Icons.wallet, ['Add Expense', 'Expense Categories', 'Expense History', 'Expense Reports']),
-  AppModule('Inventory & In Stock', 'Stock', Icons.warehouse, ['In Stock', 'Low Stock', 'Out of Stock', 'Stock History']),
-  AppModule('Warehouse', 'Stock', Icons.store, ['Add Warehouse', 'Warehouse List', 'Warehouse Stock']),
-  AppModule('Stock Transfer & Adjustment', 'Stock', Icons.swap_horiz, ['Transfer Stock', 'Stock Adjustment', 'Transfer History']),
-  AppModule('Expiry & Damaged Stock', 'Stock', Icons.warning_amber, ['Expired Products', 'Near Expiry', 'Damaged Stock']),
-  AppModule('Purchase & Purchase Return', 'Purchases', Icons.shopping_bag, ['New Purchase', 'Purchase History', 'Purchase Return', 'Return History']),
-  AppModule('Suppliers', 'People', Icons.local_shipping, ['Add Supplier', 'Supplier List', 'Supplier Details', 'Supplier Ledger']),
-  AppModule('Reports & Profit & Loss', 'Reports', Icons.bar_chart, ['Sales Report', 'Purchase Report', 'Expense Report', 'Profit & Loss', 'Stock Report', 'Khata Report']),
-  AppModule('Barcode Generate & Labels', 'Tools', Icons.qr_code_scanner, ['Generate Barcode', 'Print Labels', 'Scan Barcode']),
-  AppModule('Bills & Printers', 'Tools', Icons.print, ['Create Bill', 'Bill History', 'Printer Settings', 'Bill Design']),
-  AppModule('WhatsApp', 'Tools', Icons.message, ['Send Bill', 'Payment Reminder', 'Customer Message', 'WhatsApp Settings']),
-  AppModule('Raast & Instant Pay', 'Payments', Icons.bolt, ['Raast Payment', 'Payment Request', 'Payment History']),
-  AppModule('Payments', 'Payments', Icons.payment, ['Receive Payment', 'Make Payment', 'Payment Methods', 'Transactions']),
-  AppModule('Business & Branches', 'Management', Icons.business, ['Business Profile', 'Add Branch', 'Branch List', 'Business Details']),
-  AppModule('Admin & Staff Management', 'Management', Icons.groups, ['Add Staff', 'Staff List', 'Roles & Permissions', 'Staff Attendance']),
-  AppModule('Discounts & Taxes', 'Management', Icons.percent, ['Create Discount', 'Discount List', 'Tax Settings']),
-  AppModule('Appointments & Reminders', 'Management', Icons.event, ['Add Appointment', 'Appointment List', 'Set Reminder']),
-  AppModule('Customer Loyalty', 'Management', Icons.loyalty, ['Loyalty Points', 'Rewards', 'Customer Offers']),
-  AppModule('Accounting & Cashbook', 'Accounts', Icons.calculate, ['Cash In', 'Cash Out', 'Cashbook', 'Daily Closing']),
-  AppModule('Bank & Cash Accounts', 'Accounts', Icons.account_balance, ['Add Bank Account', 'Cash Account', 'Account History']),
-  AppModule('Online Store / Website', 'Online', Icons.language, ['Store Settings', 'Online Products', 'Online Orders']),
-  AppModule('Settings', 'System', Icons.settings, ['Business Settings', 'App Settings', 'Invoice Settings', 'Notification Settings']),
-  AppModule('Security & Permissions', 'System', Icons.security, ['App Lock', 'Change PIN', 'User Permissions', 'Login Security']),
-  AppModule('Languages', 'System', Icons.translate, ['Choose Language', 'Download Language Pack', 'Text Direction']),
-  AppModule('Backup & Restore', 'System', Icons.backup, ['Create Backup', 'Restore Backup', 'Backup History']),
-  AppModule('Packages & Subscription', 'System', Icons.workspace_premium, ['Current Package', 'Upgrade Package', 'Renew Subscription', 'Payment History']),
-  AppModule('Support', 'Help', Icons.support_agent, ['Contact Support', 'Submit Complaint', 'Help Center']),
-  AppModule('History & Records', 'Records', Icons.history, ['Sales Records', 'Purchase Records', 'Customer Records', 'Deleted Records']),
-  AppModule('Activity History', 'Records', Icons.manage_history, ['User Activity', 'Login History', 'Changes History']),
-  AppModule('Customer Notifications', 'Tools', Icons.notifications, ['Send Notification', 'Notification History', 'Message Settings']),
+  AppModule('Dashboard', 'Home', Icons.dashboard,
+      ['Business Overview', 'Today Summary', 'Quick Actions']),
+  AppModule('New Sale', 'Sales', Icons.point_of_sale,
+      ['Create New Sale', 'Sale History', 'Sale Details', 'Payment Received']),
+  AppModule('Sales Return', 'Sales', Icons.assignment_return,
+      ['New Sales Return', 'Return History', 'Refund Details']),
+  AppModule('Orders & Quotations', 'Sales', Icons.request_quote,
+      ['New Order', 'Order List', 'Create Quotation', 'Quotation History']),
+  AppModule('Products', 'Stock', Icons.inventory_2, [
+    'Add Product',
+    'Product List',
+    'Edit Product',
+    'Product Categories',
+    'Product Barcode'
+  ]),
+  AppModule('Customers', 'People', Icons.people,
+      ['Add Customer', 'Customer List', 'Customer Details', 'Customer Ledger']),
+  AppModule('Khata', 'Accounts', Icons.menu_book,
+      ['Naya Khata', 'Khata List', 'Customer Khata', 'Supplier Khata']),
+  AppModule('Baqaya Udhaar', 'Accounts', Icons.account_balance_wallet,
+      ['Total Remaining Amount', 'Customer Wise Balance', 'Receive Payment']),
+  AppModule('Jama Raqam & Udhar Dein', 'Accounts', Icons.currency_exchange,
+      ['Jama Raqam', 'Udhar Dein', 'Payment History']),
+  AppModule('Expenses', 'Accounts', Icons.wallet, [
+    'Add Expense',
+    'Expense Categories',
+    'Expense History',
+    'Expense Reports'
+  ]),
+  AppModule('Inventory & In Stock', 'Stock', Icons.warehouse,
+      ['In Stock', 'Low Stock', 'Out of Stock', 'Stock History']),
+  AppModule('Warehouse', 'Stock', Icons.store,
+      ['Add Warehouse', 'Warehouse List', 'Warehouse Stock']),
+  AppModule('Stock Transfer & Adjustment', 'Stock', Icons.swap_horiz,
+      ['Transfer Stock', 'Stock Adjustment', 'Transfer History']),
+  AppModule('Expiry & Damaged Stock', 'Stock', Icons.warning_amber,
+      ['Expired Products', 'Near Expiry', 'Damaged Stock']),
+  AppModule('Purchase & Purchase Return', 'Purchases', Icons.shopping_bag, [
+    'New Purchase',
+    'Purchase History',
+    'Purchase Return',
+    'Return History'
+  ]),
+  AppModule('Suppliers', 'People', Icons.local_shipping,
+      ['Add Supplier', 'Supplier List', 'Supplier Details', 'Supplier Ledger']),
+  AppModule('Reports & Profit & Loss', 'Reports', Icons.bar_chart, [
+    'Sales Report',
+    'Purchase Report',
+    'Expense Report',
+    'Profit & Loss',
+    'Stock Report',
+    'Khata Report'
+  ]),
+  AppModule('Barcode Generate & Labels', 'Tools', Icons.qr_code_scanner,
+      ['Generate Barcode', 'Print Labels', 'Scan Barcode']),
+  AppModule('Bills & Printers', 'Tools', Icons.print,
+      ['Create Bill', 'Bill History', 'Printer Settings', 'Bill Design']),
+  AppModule('WhatsApp', 'Tools', Icons.message, [
+    'Send Bill',
+    'Payment Reminder',
+    'Customer Message',
+    'WhatsApp Settings'
+  ]),
+  AppModule('Raast & Instant Pay', 'Payments', Icons.bolt,
+      ['Raast Payment', 'Payment Request', 'Payment History']),
+  AppModule('Payments', 'Payments', Icons.payment,
+      ['Receive Payment', 'Make Payment', 'Payment Methods', 'Transactions']),
+  AppModule('Business & Branches', 'Management', Icons.business,
+      ['Business Profile', 'Add Branch', 'Branch List', 'Business Details']),
+  AppModule('Admin & Staff Management', 'Management', Icons.groups,
+      ['Add Staff', 'Staff List', 'Roles & Permissions', 'Staff Attendance']),
+  AppModule('Discounts & Taxes', 'Management', Icons.percent,
+      ['Create Discount', 'Discount List', 'Tax Settings']),
+  AppModule('Appointments & Reminders', 'Management', Icons.event,
+      ['Add Appointment', 'Appointment List', 'Set Reminder']),
+  AppModule('Customer Loyalty', 'Management', Icons.loyalty,
+      ['Loyalty Points', 'Rewards', 'Customer Offers']),
+  AppModule('Accounting & Cashbook', 'Accounts', Icons.calculate,
+      ['Cash In', 'Cash Out', 'Cashbook', 'Daily Closing']),
+  AppModule('Bank & Cash Accounts', 'Accounts', Icons.account_balance,
+      ['Add Bank Account', 'Cash Account', 'Account History']),
+  AppModule('Online Store / Website', 'Online', Icons.language,
+      ['Store Settings', 'Online Products', 'Online Orders']),
+  AppModule('Settings', 'System', Icons.settings, [
+    'Business Settings',
+    'App Settings',
+    'Invoice Settings',
+    'Notification Settings'
+  ]),
+  AppModule('Security & Permissions', 'System', Icons.security,
+      ['App Lock', 'Change PIN', 'User Permissions', 'Login Security']),
+  AppModule('Languages', 'System', Icons.translate,
+      ['Choose Language', 'Download Language Pack', 'Text Direction']),
+  AppModule('Backup & Restore', 'System', Icons.backup,
+      ['Create Backup', 'Restore Backup', 'Backup History']),
+  AppModule('Packages & Subscription', 'System', Icons.workspace_premium, [
+    'Current Package',
+    'Upgrade Package',
+    'Renew Subscription',
+    'Payment History'
+  ]),
+  AppModule('Support', 'Help', Icons.support_agent,
+      ['Contact Support', 'Submit Complaint', 'Help Center']),
+  AppModule('History & Records', 'Records', Icons.history, [
+    'Sales Records',
+    'Purchase Records',
+    'Customer Records',
+    'Deleted Records'
+  ]),
+  AppModule('Activity History', 'Records', Icons.manage_history,
+      ['User Activity', 'Login History', 'Changes History']),
+  AppModule('Customer Notifications', 'Tools', Icons.notifications,
+      ['Send Notification', 'Notification History', 'Message Settings']),
 ];
 
 class DashboardScreen extends StatefulWidget {
@@ -122,13 +218,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final shown = modules.where((m) =>
-      m.name.toLowerCase().contains(search.toLowerCase()) ||
-      m.category.toLowerCase().contains(search.toLowerCase())).toList();
+    const hiddenDashboardModules = <String>{
+      'Barcode Generate & Labels',
+      'Bills & Printers',
+      'Discounts & Taxes',
+      'Security & Permissions',
+      'Languages',
+      'Backup & Restore',
+      'Packages & Subscription',
+      'Support',
+      'Customer Notifications',
+    };
+
+    final shown = modules
+        .where((m) =>
+            !hiddenDashboardModules.contains(m.name) &&
+            (m.name.toLowerCase().contains(search.toLowerCase()) ||
+                m.category.toLowerCase().contains(search.toLowerCase())))
+        .toList();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('OmniBizCRM', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('OmniBizCRM',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: false,
         actions: [
           IconButton(
@@ -150,9 +262,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Apna Hisab Apne Pas', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                Text('Your Business, Your Control',
+                    style:
+                        TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 SizedBox(height: 6),
-                Text('Aapke business ka complete management'),
+                Text('Complete Management for Your Business'),
               ],
             ),
           ),
@@ -163,7 +277,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               decoration: InputDecoration(
                 hintText: 'Search options...',
                 prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
               ),
             ),
           ),
@@ -171,7 +286,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             padding: const EdgeInsets.all(12),
             child: Row(
               children: [
-                const Text('All Business Options', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text('All Business Options',
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const Spacer(),
                 Text('${shown.length} options'),
               ],
@@ -199,12 +316,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(module.icon, size: 30, color: Theme.of(context).colorScheme.primary),
+                          Icon(module.icon,
+                              size: 30,
+                              color: Theme.of(context).colorScheme.primary),
                           const SizedBox(height: 9),
-                          Text(module.name, textAlign: TextAlign.center,
-                            style: const TextStyle(fontWeight: FontWeight.w600)),
+                          Text(module.displayName,
+                              textAlign: TextAlign.center,
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w600)),
                           const SizedBox(height: 4),
-                          Text(module.category, style: Theme.of(context).textTheme.bodySmall),
+                          Text(module.category,
+                              style: Theme.of(context).textTheme.bodySmall),
                         ],
                       ),
                     ),
@@ -219,6 +341,444 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
+class SettingsScreen extends StatefulWidget {
+  const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  static const settingsModules = <AppModule>[
+    AppModule('Business Settings', 'BUSINESS SETTINGS', Icons.business, [
+      'Business Profile',
+      'Business Information',
+      'Business Logo',
+      'Business Address',
+      'Branch Settings',
+    ]),
+    AppModule(
+        'Payment Settings', 'BUSINESS SETTINGS', Icons.account_balance_wallet, [
+      'Payment Methods',
+      'Bank Accounts',
+      'Cash Settings',
+      'Default Payment Method',
+    ]),
+    AppModule('Inventory Settings', 'BUSINESS SETTINGS', Icons.inventory_2, [
+      'Product Categories',
+      'Units Management',
+      'Stock Alerts',
+      'Low Stock Notifications',
+    ]),
+    AppModule('Discounts & Taxes', 'SALES & OPERATIONS', Icons.percent, [
+      'Create Discount',
+      'Discount List',
+      'Percentage Discount',
+      'Fixed Amount Discount',
+      'Product-wise Discount',
+      'Customer-wise Discount',
+      'Tax Settings',
+      'Tax Rates',
+      'Tax Inclusive / Exclusive',
+    ]),
+    AppModule(
+        'Customer Notifications', 'SALES & OPERATIONS', Icons.notifications, [
+      'Send Notification',
+      'Notification History',
+      'Message Settings',
+      'WhatsApp Notifications',
+      'SMS Notifications',
+      'Payment Reminders',
+      'Message Templates',
+    ]),
+    AppModule('Bills & Printers', 'SALES & OPERATIONS', Icons.print, [
+      'Create Bill',
+      'Bill History',
+      'Printer Settings',
+      'Bill Design',
+      'Invoice Settings',
+      'Invoice Numbering',
+      'Paper Size',
+      'PDF Settings',
+    ]),
+    AppModule('Barcode Generate & Labels', 'SALES & OPERATIONS',
+        Icons.qr_code_scanner, [
+      'Generate Barcode',
+      'Print Labels',
+      'Scan Barcode',
+      'Barcode Format',
+      'Label Design',
+      'Label Size',
+    ]),
+    AppModule('Security & Permissions', 'ACCESS & USERS', Icons.security, [
+      'App Lock',
+      'Change PIN',
+      'User Permissions',
+      'Login Security',
+      'Access Control',
+    ]),
+    AppModule('User & Role Management', 'ACCESS & USERS', Icons.groups, [
+      'User Management',
+      'Role Management',
+      'Admin Permissions',
+      'Branch Access',
+      'Staff Access',
+    ]),
+    AppModule('Languages', 'ACCESS & USERS', Icons.translate, [
+      'Choose Language',
+      'Download Language Pack',
+      'Text Direction',
+    ]),
+    AppModule('Themes & Templates', 'APPEARANCE', Icons.palette_outlined, [
+      'Choose Theme',
+      'Create Your Own Theme',
+      'Theme Colors',
+      'App Templates',
+    ]),
+    AppModule('Backup & Restore', 'SUBSCRIPTION & SYSTEM', Icons.backup, [
+      'Create Backup',
+      'Restore Backup',
+      'Backup History',
+      'Google Drive Backup',
+      'Manual Backup',
+    ]),
+    AppModule('Subscription & License', 'SUBSCRIPTION & SYSTEM',
+        Icons.verified_user, [
+      'Current Subscription',
+      'License Information',
+      'Renewal Details',
+    ]),
+    AppModule('Packages & Subscription', 'SUBSCRIPTION & SYSTEM',
+        Icons.workspace_premium, [
+      'Current Package',
+      'Upgrade Package',
+      'Renew Subscription',
+      'Payment History',
+      'Available Packages',
+      'Package Details',
+    ]),
+    AppModule('General Settings', 'SUBSCRIPTION & SYSTEM', Icons.tune, [
+      'Currency',
+      'Date Format',
+      'Time Format',
+      'Notification Preferences',
+      'Import & Export',
+    ]),
+    AppModule('Data Management', 'SUBSCRIPTION & SYSTEM', Icons.storage, [
+      'Data Export',
+      'Data Import',
+    ]),
+    AppModule(
+        'System Information', 'SUBSCRIPTION & SYSTEM', Icons.info_outline, [
+      'App Version',
+      'System Status',
+      'Database Information',
+    ]),
+    AppModule('Support', 'SUPPORT', Icons.support_agent, [
+      'Contact Support',
+      'Submit Complaint',
+      'Help Center',
+      'FAQs',
+    ]),
+    AppModule('Support OmniBizCRM', 'SUPPORT', Icons.volunteer_activism, [
+      'Donate Now',
+      'Payment Methods',
+      'Donation History',
+      'Donation Receipts',
+      'About Donations',
+      'Supporter Appreciation',
+    ]),
+    AppModule('Download App', 'APP & DOWNLOADS', Icons.download, [
+      'Download OmniBizCRM',
+    ]),
+    AppModule('Rate Us on Google Play', 'APP & DOWNLOADS', Icons.star_rate, [
+      'Rate OmniBizCRM',
+    ]),
+    AppModule('Share App', 'APP & DOWNLOADS', Icons.share, [
+      'Share OmniBizCRM',
+    ]),
+    AppModule("What's New", 'APP & DOWNLOADS', Icons.new_releases, [
+      'Latest Features',
+      'Version History',
+    ]),
+    AppModule('Privacy Policy', 'APP & DOWNLOADS', Icons.privacy_tip, [
+      'Privacy Policy',
+    ]),
+    AppModule('Terms & Conditions', 'APP & DOWNLOADS', Icons.description, [
+      'Terms & Conditions',
+    ]),
+    AppModule('About OmniBizCRM', 'APP & DOWNLOADS', Icons.info, [
+      'App Information',
+      'Version Details',
+    ]),
+  ];
+
+  static const categoryNames = [
+    'BUSINESS SETTINGS',
+    'SALES & OPERATIONS',
+    'ACCESS & USERS',
+    'APPEARANCE',
+    'SUBSCRIPTION & SYSTEM',
+    'SUPPORT',
+    'APP & DOWNLOADS',
+  ];
+
+  String search = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final query = search.trim().toLowerCase();
+    final shown = settingsModules.where((module) {
+      return module.displayName.toLowerCase().contains(query) ||
+          module.options.any((option) => option.toLowerCase().contains(query));
+    }).toList();
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAF9),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 14, 16, 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Settings',
+                          style: TextStyle(
+                            fontSize: 23,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF183B32),
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          'Manage your business preferences',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.settings_outlined,
+                    color: Color(0xFF16866B),
+                    size: 27,
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: TextField(
+                onChanged: (value) => setState(() => search = value),
+                decoration: InputDecoration(
+                  hintText: 'Search Settings...',
+                  prefixIcon:
+                      const Icon(Icons.search, color: Color(0xFF16866B)),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFE3EAE6)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFE3EAE6)),
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(14, 2, 14, 8),
+                children: [
+                  for (final category in categoryNames)
+                    Builder(builder: (context) {
+                      final items = shown
+                          .where((module) => module.category == category)
+                          .toList();
+                      if (items.isEmpty) return const SizedBox.shrink();
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 15),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+                              child: Text(
+                                category,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.0,
+                                  color: Color(0xFF16866B),
+                                ),
+                              ),
+                            ),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(13),
+                                border: Border.all(
+                                  color: const Color(0xFFE6ECE8),
+                                ),
+                              ),
+                              child: Column(
+                                children: [
+                                  for (int i = 0; i < items.length; i++) ...[
+                                    InkWell(
+                                      borderRadius: BorderRadius.circular(12),
+                                      onTap: () =>
+                                          openModule(context, items[i]),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 12,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              items[i].icon,
+                                              size: 21,
+                                              color: const Color(0xFF16866B),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Text(
+                                                items[i].displayName,
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: Color(0xFF263B34),
+                                                ),
+                                              ),
+                                            ),
+                                            const Tooltip(
+                                              message: 'Quick Settings',
+                                              child: Icon(
+                                                Icons.tune,
+                                                size: 20,
+                                                color: Color(0xFF16866B),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 13),
+                                            const Tooltip(
+                                              message: 'More Options',
+                                              child: Icon(
+                                                Icons.more_vert,
+                                                size: 21,
+                                                color: Color(0xFF65756E),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    if (i != items.length - 1)
+                                      const Divider(
+                                        height: 1,
+                                        indent: 44,
+                                        color: Color(0xFFEEF1EF),
+                                      ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  const SizedBox(height: 8),
+                  Center(
+                    child: Column(
+                      children: [
+                        CustomPaint(
+                          size: const Size(34, 34),
+                          painter: _GooglePlayLogoPainter(),
+                        ),
+                        const SizedBox(height: 5),
+                        const Text(
+                          'Google Play Store',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF35463F),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Get OmniBizCRM on Google Play',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GooglePlayLogoPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final blue = Paint()..color = const Color(0xFF4285F4);
+    final green = Paint()..color = const Color(0xFF34A853);
+    final yellow = Paint()..color = const Color(0xFFFBBC04);
+    final red = Paint()..color = const Color(0xFFEA4335);
+
+    final left = Path()
+      ..moveTo(3, 2)
+      ..lineTo(17, 16)
+      ..lineTo(3, 32)
+      ..close();
+    canvas.drawPath(left, blue);
+
+    final top = Path()
+      ..moveTo(3, 2)
+      ..lineTo(29, 15)
+      ..lineTo(20, 19)
+      ..lineTo(17, 16)
+      ..close();
+    canvas.drawPath(top, green);
+
+    final bottom = Path()
+      ..moveTo(3, 32)
+      ..lineTo(17, 16)
+      ..lineTo(20, 13)
+      ..lineTo(29, 19)
+      ..close();
+    canvas.drawPath(bottom, yellow);
+
+    final right = Path()
+      ..moveTo(29, 15)
+      ..lineTo(33, 17)
+      ..quadraticBezierTo(35, 18, 33, 20)
+      ..lineTo(29, 22)
+      ..lineTo(20, 19)
+      ..close();
+    canvas.drawPath(right, red);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
 
 void openModule(BuildContext context, AppModule module) {
   if (module.name == 'Dashboard') return;
@@ -226,6 +786,9 @@ void openModule(BuildContext context, AppModule module) {
   Widget screen;
 
   switch (module.name) {
+    case 'Settings':
+      screen = const SettingsScreen();
+      break;
     case 'Customers':
       screen = const CustomerManagementScreen();
       break;
@@ -270,52 +833,54 @@ class ModuleScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(module.name)),
+      appBar: AppBar(title: Text(module.displayName)),
       body: ListView(
         padding: const EdgeInsets.all(12),
         children: [
           Card(
             child: ListTile(
               leading: Icon(module.icon, size: 32),
-              title: Text(module.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+              title: Text(module.displayName,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
               subtitle: Text(module.category),
             ),
           ),
           const Padding(
             padding: EdgeInsets.fromLTRB(8, 18, 8, 8),
-            child: Text('Sub Options', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            child: Text('Sub Options',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ),
           ...module.options.map((option) => Card(
-            child: ListTile(
-              leading: const Icon(Icons.arrow_forward_ios, size: 18),
-              title: Text(option),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.push(context, MaterialPageRoute(
-                builder: (_) {
-                  if (module.name == 'New Sale' &&
-                      option == 'Create New Sale') {
-                    return const NewSaleScreen();
-                  }
-                  if (module.name == 'Suppliers' &&
-                      option != 'Supplier Ledger') {
-                    return const SupplierManagementScreen();
-                  }
-                  if (module.name == 'Sales Return') {
-                    if (option == 'New Sales Return') {
-                      return const SalesReturnScreen();
-                    }
-                    if (option == 'Return History') {
-                      return const ReturnApprovalScreen();
-                    }
-                    if (option == 'Refund Details') {
-                      return const ReturnApprovalScreen(readOnly: true);
-                    }
-                  }
-                  return OptionScreen(title: option);
-                },
+                child: ListTile(
+                  leading: const Icon(Icons.arrow_forward_ios, size: 18),
+                  title: Text(module.displayOption(option)),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.push(context, MaterialPageRoute(
+                    builder: (_) {
+                      if (module.name == 'New Sale' &&
+                          option == 'Create New Sale') {
+                        return const NewSaleScreen();
+                      }
+                      if (module.name == 'Suppliers' &&
+                          option != 'Supplier Ledger') {
+                        return const SupplierManagementScreen();
+                      }
+                      if (module.name == 'Sales Return') {
+                        if (option == 'New Sales Return') {
+                          return const SalesReturnScreen();
+                        }
+                        if (option == 'Return History') {
+                          return const ReturnApprovalScreen();
+                        }
+                        if (option == 'Refund Details') {
+                          return const ReturnApprovalScreen(readOnly: true);
+                        }
+                      }
+                      return OptionScreen(title: option);
+                    },
+                  )),
+                ),
               )),
-            ),
-          )),
         ],
       ),
     );
@@ -338,7 +903,9 @@ class OptionScreen extends StatelessWidget {
             children: [
               const Icon(Icons.construction, size: 52),
               const SizedBox(height: 16),
-              Text(title, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.bold)),
+              Text(title,
+                  style: const TextStyle(
+                      fontSize: 21, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               const Text(
                 'Is option ka actual form aur data system aglay development step mein banaya jayega.',
@@ -351,7 +918,6 @@ class OptionScreen extends StatelessWidget {
     );
   }
 }
-
 
 class OmniSplashScreen extends StatefulWidget {
   const OmniSplashScreen({super.key});
@@ -480,7 +1046,7 @@ class _OmniSplashScreenState extends State<OmniSplashScreen>
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Apna Hisab Apne Pas',
+                  'Your Business, Your Control',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.75),
                     fontSize: 15,

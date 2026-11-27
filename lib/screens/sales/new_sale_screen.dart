@@ -179,7 +179,7 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
     final index = cart.indexWhere((e) => e['productId'] == id);
 
     if (stock <= 0) {
-      _message('Is product ka stock available nahi hai.');
+      _message('Stock is not available for this product.');
       return;
     }
 
@@ -274,7 +274,7 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
       if (name.text.trim().isEmpty ||
           p == null || !p.isFinite || p < 0 ||
           q == null || !q.isFinite || q <= 0) {
-        _message('Item name, valid price aur quantity enter karein.');
+        _message('Please enter an item name, valid price, and quantity.');
       } else {
         setState(() {
           cart.add({
@@ -346,9 +346,9 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
           _customerSearch.text = selectedCustomer!['name'] as String;
           customers = [];
         });
-        _message('Customer add ho gaya.');
+        _message('Customer added successfully.');
       } catch (e) {
-        _message('Customer save nahi hua: $e');
+        _message('Customer could not be saved: $e');
       }
     }
 
@@ -370,14 +370,14 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
 
   Future<void> _saveSale() async {
     if (cart.isEmpty) {
-      _message('Pehle cart mein product add karein.');
+      _message('Please add a product to the cart first.');
       return;
     }
 
     if (!_isValidAmount(_discount) ||
         !_isValidAmount(_tax) ||
         !_isValidAmount(_paid)) {
-      _message('Discount, Tax aur Paid mein valid numeric amount enter karein.');
+      _message('Please enter valid numeric amounts for Discount, Tax, and Paid.');
       return;
     }
 
@@ -387,12 +387,12 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
         !paid.isFinite || paid < 0 ||
         !total.isFinite || total < 0 ||
         discount > subtotal || paid > total) {
-      _message('Discount, tax ya paid amount check karein.');
+      _message('Please check the discount, tax, or paid amount.');
       return;
     }
 
     if (remaining > 0.000001 && selectedCustomer == null) {
-      _message('Udhaar ya partial payment ke liye customer select karein.');
+      _message('Please select a customer for credit or partial payment.');
       return;
     }
 
@@ -437,13 +437,13 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
         setState(() => lastGeneratedSaleDetails = saleDetails);
         final invoice = saleDetails?['sale']?['bill_number'];
         _message(invoice == null
-            ? 'Sale save ho gayi, lekin invoice details load nahi huin.'
+            ? 'Sale saved, but invoice details could not be loaded.'
             : 'Invoice $invoice successfully generated.');
       } catch (e) {
-        _message('Sale save ho gayi, lekin invoice details load nahi huin: $e');
+        _message('Sale saved, but invoice details could not be loaded: $e');
       }
     } catch (e) {
-      _message('Sale save nahi hui: $e');
+      _message('Sale could not be saved: $e');
     } finally {
       if (mounted) setState(() => saving = false);
     }
@@ -649,9 +649,9 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
                   Expanded(child: OutlinedButton.icon(
                     onPressed: selectedCustomer == null
                         ? null
-                        : () => _message('Customer Khata will open for the selected customer.'),
+                        : () => _message('Customer Ledger will open for the selected customer.'),
                     icon: const Icon(Icons.menu_book),
-                    label: const Text('Customer Khata'),
+                    label: const Text('Customer Ledger'),
                   )),
                 ],
               ),
@@ -892,7 +892,7 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
                           Expanded(
                             child: Text(
                               option == 'Credit / Khata (Udhar)'
-                                  ? 'Credit / Khata'
+                                  ? 'Credit'
                                   : option,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -1149,7 +1149,7 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
 
   Future<Uint8List> _createInvoicePdf() async {
     final sale = _generatedSale;
-    if (sale == null) throw StateError('Pehle bill generate karein.');
+    if (sale == null) throw StateError('Please generate the invoice first.');
 
     final pdf = pw.Document();
     pdf.addPage(pw.MultiPage(
@@ -1200,7 +1200,7 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
       );
       _message('PDF save process complete hua.');
     } catch (e) {
-      _message('PDF save nahi hui: $e');
+      _message('PDF could not be saved: $e');
     }
   }
 
@@ -1209,7 +1209,7 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
       final bytes = await _createInvoicePdf();
       await Printing.layoutPdf(onLayout: (_) async => bytes);
     } catch (e) {
-      _message('Print nahi ho saka: $e');
+      _message('Printing failed: $e');
     }
   }
 
@@ -1226,7 +1226,7 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
         text: 'Invoice ${sale['bill_number']}',
       );
     } catch (e) {
-      _message('Bill share nahi ho saka: $e');
+      _message('Invoice could not be shared: $e');
     }
   }
 
@@ -1237,7 +1237,7 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
       final mobile = (sale['customer_mobile'] ?? '')
           .toString().replaceAll(RegExp(r'[^0-9]'), '');
       if (mobile.isEmpty) {
-        _message('Customer ka mobile number available nahi hai.');
+        _message('Customer mobile number is not available.');
         return;
       }
       var phone = mobile;
@@ -1248,9 +1248,9 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
         'https://wa.me/$phone?text=${Uri.encodeComponent(_invoiceMessage())}',
       );
       final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-      if (!opened) _message('WhatsApp open nahi ho saka.');
+      if (!opened) _message('WhatsApp could not be opened.');
     } catch (e) {
-      _message('WhatsApp bill send nahi ho saka: $e');
+      _message('Invoice could not be sent via WhatsApp: $e');
     }
   }
 
@@ -1288,7 +1288,7 @@ class _NewSaleScreenState extends State<NewSaleScreen> {
               ] else ...[
                 Text('Receipt / Payment History'),
                 if (payments.isEmpty)
-                  const Text('No payment received yet. This invoice is on Udhaar.')
+                  const Text('No payment received yet. This invoice is on credit.')
                 else
                   ...payments.map((payment) => Padding(
                     padding: const EdgeInsets.symmetric(vertical: 5),

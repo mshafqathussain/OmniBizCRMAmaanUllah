@@ -832,7 +832,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Photo select nahi ho saki: $e')));
+      ).showSnackBar(SnackBar(content: Text('Photo could not be selected: $e')));
     }
   }
 
@@ -877,7 +877,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Photo process nahi ho saki: $e')));
+      ).showSnackBar(SnackBar(content: Text('Photo could not be processed: $e')));
     }
   }
 

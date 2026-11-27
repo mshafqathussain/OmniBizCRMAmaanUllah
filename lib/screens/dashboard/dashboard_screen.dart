@@ -236,10 +236,10 @@ class _NewDashboardScreenState extends State<NewDashboardScreen> {
             {'n':'Total Sale','v':money(selected['sales']),'i':Icons.trending_up,'c':Colors.blue},
             {'n':'Total Products','v':'${selected['products']}','i':Icons.inventory_2,'c':Colors.purple},
             {'n':'Total Stock Value','v':money(selected['stockValue']),'i':Icons.warehouse,'c':Colors.teal},
-            {'n':'Total Baqaya Udhaar','v':money(all['remaining']),'i':Icons.account_balance_wallet,'c':Colors.red},
-            {'n':'Total Jama Raqam','v':money(all['paid']),'i':Icons.payments,'c':Colors.green},
-            {'n':"Today's Wasooli",'v':money(data['collection']),'i':Icons.handshake,'c':Colors.cyan},
-            {'n':"Today's Udhaar",'v':money(today['remaining']),'i':Icons.menu_book,'c':Colors.orange},
+            {'n':'Total Outstanding Balance','v':money(all['remaining']),'i':Icons.account_balance_wallet,'c':Colors.red},
+            {'n':'Total Amount Received','v':money(all['paid']),'i':Icons.payments,'c':Colors.green},
+            {'n':"Today's Collection",'v':money(data['collection']),'i':Icons.handshake,'c':Colors.cyan},
+            {'n':"Today's Credit",'v':money(today['remaining']),'i':Icons.menu_book,'c':Colors.orange},
             {'n':'Total Customers','v':'${selected['customers']}','i':Icons.people,'c':Colors.blueAccent},
             {'n':"Today's Expenses",'v':money(today['expenses']),'i':Icons.receipt_long,'c':Colors.deepOrange},
             {'n':"Today's Profit",'v':money(today['profit']),'i':Icons.show_chart,'c':Colors.lightGreen},
@@ -258,11 +258,28 @@ class _NewDashboardScreenState extends State<NewDashboardScreen> {
             {'n':'Add Product','i':Icons.add_box,'m':'Products'},
             {'n':'Add Expense','i':Icons.receipt,'m':'Expenses'},
             {'n':'Cash Book','i':Icons.menu_book,'m':'Accounting & Cashbook'},
-            {'n':'Naya Khata','i':Icons.menu_book,'m':'Khata'},
+            {'n':'New Ledger','i':Icons.menu_book,'m':'Khata'},
             {'n':'Earning & Summary','i':Icons.bar_chart,'m':'Reports & Profit & Loss'},
             {'n':'Scan Barcode','i':Icons.qr_code_scanner,'m':'Barcode Generate & Labels'},
             {'n':'Reports','i':Icons.bar_chart,'m':'Reports & Profit & Loss'},
           ];
+
+          final hiddenDashboardModules = {
+            'Discounts & Taxes',
+            'Customer Notifications',
+            'Bills & Printers',
+            'Barcode Generate & Labels',
+            'Security & Permissions',
+            'Languages',
+            'Support',
+            'Subscription & License',
+            'Packages & Subscription',
+            'Backup & Restore',
+          };
+          final dashboardModules = widget.modules
+              .where((module) =>
+                  !hiddenDashboardModules.contains(module.name))
+              .toList();
 
           return RefreshIndicator(
             onRefresh: () async => refresh(),
@@ -281,7 +298,7 @@ class _NewDashboardScreenState extends State<NewDashboardScreen> {
                       Text('WELCOME TO OMNIBIZCRM',
                         style: TextStyle(color: Color(0xFF7EEAD5), fontSize: 11)),
                       SizedBox(height: 7),
-                      Text('Apna Hisab Apne Pas',
+                      Text('Your Business, Your Control',
                         style: TextStyle(color: Colors.white,
                           fontSize: 19, fontWeight: FontWeight.bold)),
                       Text('Manage your complete business in one place',
@@ -357,7 +374,7 @@ class _NewDashboardScreenState extends State<NewDashboardScreen> {
                 GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: widget.modules.length,
+                  itemCount: dashboardModules.length,
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 4,
                     mainAxisSpacing: 8,
@@ -365,7 +382,7 @@ class _NewDashboardScreenState extends State<NewDashboardScreen> {
                     childAspectRatio: 1.0,
                   ),
                   itemBuilder: (_, i) {
-                    final module = widget.modules[i];
+                    final module = dashboardModules[i];
                     return InkWell(
                       onTap: () => widget.onOpenModule(context, module),
                       borderRadius: BorderRadius.circular(12),
@@ -381,7 +398,7 @@ class _NewDashboardScreenState extends State<NewDashboardScreen> {
                             Icon(module.icon, color: accent, size: 26),
                             const SizedBox(height: 6),
                             Text(
-                              module.name,
+                              module.displayName,
                               textAlign: TextAlign.center,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
@@ -402,9 +419,9 @@ class _NewDashboardScreenState extends State<NewDashboardScreen> {
                   decoration: BoxDecoration(
                     color: panel, borderRadius: BorderRadius.circular(15)),
                   child: Column(children: [
-                    summaryRow('Total Udhaar', money(all['sales'])),
-                    summaryRow('Total Wasooli', money(all['paid'])),
-                    summaryRow('Total Baqaya', money(all['remaining'])),
+                    summaryRow('Total Credit', money(all['sales'])),
+                    summaryRow('Total Collection', money(all['paid'])),
+                    summaryRow('Total Outstanding Balance', money(all['remaining'])),
                   ]),
                 ),
                 heading('Complete Bill History'),

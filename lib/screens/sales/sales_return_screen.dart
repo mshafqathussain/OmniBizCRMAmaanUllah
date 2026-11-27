@@ -42,7 +42,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
   Future<void> searchInvoice() async {
     final invoice = invoiceController.text.trim();
     if (invoice.isEmpty) {
-      message('Invoice number enter karein.');
+      message('Please enter the invoice number.');
       return;
     }
 
@@ -62,7 +62,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
           sale = null;
           items = [];
         });
-        message('Invoice nahi mila.');
+        message('Invoice not found.');
         return;
       }
 
@@ -108,9 +108,9 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
       );
       draftId = (result['id'] as num).toInt();
       if (mounted) setState(() {});
-      message('Draft save ho gaya: ${result['draft_number']}');
+      message('Draft saved successfully: ${result['draft_number']}');
     } catch (e) {
-      message('Draft save nahi hua: $e');
+      message('Draft could not be saved: $e');
     }
   }
 
@@ -120,7 +120,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
       if (!mounted) return;
 
       if (drafts.isEmpty) {
-        message('Koi saved Draft nahi hai.');
+        message('No saved drafts found.');
         return;
       }
 
@@ -172,7 +172,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
     try {
       final draft = await db.getSaleReturnDraft(id);
       if (draft == null) {
-        message('Draft nahi mila.');
+        message('Draft not found.');
         return;
       }
 
@@ -217,7 +217,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         });
       }
       if (mounted) setState(() {});
-      message('Draft resume ho gaya.');
+      message('Draft resumed successfully.');
     } catch (e) {
       message('Draft load error: $e');
     }
@@ -225,7 +225,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
 
   Future<void> submitRequest() async {
     if (sale == null) {
-      message('Pehle original invoice search karein.');
+      message('Please search for the original invoice first.');
       return;
     }
 
@@ -243,7 +243,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
     }
 
     if (selectedItems.isEmpty) {
-      message('Kam az kam aik item ki return quantity enter karein.');
+      message('Please enter a return quantity for at least one item.');
       return;
     }
 
@@ -276,7 +276,7 @@ class _SalesReturnScreenState extends State<SalesReturnScreen> {
         'Refund: ${result['refund_id']}',
       );
     } catch (e) {
-      message('Request submit nahi hui: $e');
+      message('Request could not be submitted: $e');
     } finally {
       if (mounted) setState(() => loading = false);
     }
