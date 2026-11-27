@@ -54,7 +54,10 @@ class OmniBizCRM extends StatelessWidget {
           ),
         ),
       ),
-      home: const OmniSplashScreen(),
+      home: NewDashboardScreen(
+        modules: modules,
+        onOpenModule: (context, module) => openModule(context, module),
+      ),
     );
   }
 }
