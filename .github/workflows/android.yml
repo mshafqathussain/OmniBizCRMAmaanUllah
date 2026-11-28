@@ -34,12 +34,12 @@ jobs:
           channel: stable
 
       - name: Generate Android project
-        run: flutter create . --platforms=android --org com.omnibizcrm --project-name app
+        run: flutter create . --platforms=android --org com.example --project-name omnibizcrm
 
       - name: Verify Android package ID
         run: |
-          grep -F 'namespace = "com.omnibizcrm.app"' android/app/build.gradle.kts
-          grep -F 'applicationId = "com.omnibizcrm.app"' android/app/build.gradle.kts
+          grep -F 'namespace = "com.example.omnibizcrm"' android/app/build.gradle.kts
+          grep -F 'applicationId = "com.example.omnibizcrm"' android/app/build.gradle.kts
 
       - uses: android-actions/setup-android@v4
 

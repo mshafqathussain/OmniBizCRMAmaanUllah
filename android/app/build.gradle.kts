@@ -7,7 +7,6 @@ plugins {
 android {
     namespace = "com.example.omnibizcrm"
     compileSdk = 36
-    ndkPath = "/data/data/com.termux/files/usr/opt/android-sdk/ndk/28.2.13676358"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
