@@ -1,0 +1,1743 @@
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:sqflite/sqflite.dart';
+
+import '../../database/app_database.dart';
+
+class ProductManagementScreen extends StatefulWidget {
+  const ProductManagementScreen({super.key});
+
+  @override
+  State<ProductManagementScreen> createState() =>
+      _ProductManagementScreenState();
+}
+
+class _ProductManagementScreenState extends State<ProductManagementScreen> {
+  static const bg = Color(0xFF0B1220);
+  static const panel = Color(0xFF172337);
+  static const accent = Color(0xFF41D6B5);
+
+  final searchController = TextEditingController();
+  List<Map<String, dynamic>> products = [];
+  List<String> savedCategories = [];
+  bool loading = true;
+  String search = '';
+  String selectedCategory = 'All';
+
+  @override
+  void initState() {
+    super.initState();
+    loadProducts();
+    loadCategories();
+  }
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> loadProducts() async {
+    final db = await AppDatabase.instance.database;
+    final result = await db.query('products', orderBy: 'id DESC');
+
+    if (!mounted) return;
+    setState(() {
+      products = result;
+      loading = false;
+    });
+  }
+
+  Future<void> loadCategories() async {
+    final db = await AppDatabase.instance.database;
+    final rows = await db.query(
+      'product_categories',
+      orderBy: 'name COLLATE NOCASE',
+    );
+    if (!mounted) return;
+    setState(() {
+      savedCategories = rows.map((r) => r['name'].toString()).toList();
+      if (selectedCategory != 'All' &&
+          !savedCategories.contains(selectedCategory)) {
+        selectedCategory = 'All';
+      }
+    });
+  }
+
+  List<String> get productCategories {
+    final values = <String>{
+      ...savedCategories,
+      ...products
+          .map((p) => (p['category'] ?? '').toString().trim())
+          .where((value) => value.isNotEmpty),
+    }.toList()..sort();
+    return ['All', ...values];
+  }
+
+  Future<void> openCategoryManagement() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const ProductCategoryManagementScreen(),
+      ),
+    );
+    await loadCategories();
+    await loadProducts();
+  }
+
+  List<Map<String, dynamic>> get filteredProducts {
+    final q = search.trim().toLowerCase();
+
+    return products.where((p) {
+      final category = (p['category'] ?? '').toString().trim();
+      final matchesCategory =
+          selectedCategory == 'All' || category == selectedCategory;
+
+      final matchesSearch =
+          q.isEmpty ||
+          (p['name'] ?? '').toString().toLowerCase().contains(q) ||
+          (p['sku'] ?? '').toString().toLowerCase().contains(q) ||
+          category.toLowerCase().contains(q);
+
+      return matchesCategory && matchesSearch;
+    }).toList();
+  }
+
+  String money(dynamic value) =>
+      'Rs. ${((value as num?) ?? 0).toStringAsFixed(0)}';
+
+  Future<void> openForm({Map<String, dynamic>? product}) async {
+    final saved = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => ProductFormScreen(product: product)),
+    );
+
+    if (saved == true) loadProducts();
+  }
+
+  Future<void> deleteProduct(Map<String, dynamic> product) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Product?'),
+        content: Text('Are you sure you want to delete "${product['name']}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    final db = await AppDatabase.instance.database;
+
+    final saleItems = await db.query(
+      'sale_items',
+      columns: ['id'],
+      where: 'product_id = ?',
+      whereArgs: [product['id']],
+      limit: 1,
+    );
+
+    final movements = await db.query(
+      'stock_movements',
+      columns: ['id'],
+      where: 'product_id = ?',
+      whereArgs: [product['id']],
+      limit: 1,
+    );
+
+    if (saleItems.isNotEmpty || movements.isNotEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'This product has transaction history and cannot be deleted.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    await db.delete('products', where: 'id = ?', whereArgs: [product['id']]);
+
+    await loadProducts();
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Product deleted successfully')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final list = filteredProducts;
+
+    return Scaffold(
+      backgroundColor: bg,
+      appBar: AppBar(
+        backgroundColor: bg,
+        foregroundColor: Colors.white,
+        title: const Text(
+          'Product Management',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Manage Categories',
+            onPressed: openCategoryManagement,
+            icon: const Icon(Icons.category_outlined),
+          ),
+          IconButton(
+            tooltip: 'Refresh',
+            onPressed: () async {
+              await loadCategories();
+              await loadProducts();
+            },
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => openForm(),
+        backgroundColor: accent,
+        foregroundColor: bg,
+        icon: const Icon(Icons.add),
+        label: const Text('Add Product'),
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: TextField(
+              controller: searchController,
+              onChanged: (value) => setState(() => search = value),
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Search name, SKU or category...',
+                hintStyle: const TextStyle(color: Colors.white54),
+                prefixIcon: const Icon(Icons.search, color: accent),
+                suffixIcon: search.isEmpty
+                    ? null
+                    : IconButton(
+                        onPressed: () {
+                          searchController.clear();
+                          setState(() => search = '');
+                        },
+                        icon: const Icon(Icons.clear, color: Colors.white70),
+                      ),
+                filled: true,
+                fillColor: panel,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(13),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
+          SizedBox(
+            height: 48,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              children: productCategories.map((category) {
+                final selected = selectedCategory == category;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text(category),
+                    selected: selected,
+                    onSelected: (_) {
+                      setState(() => selectedCategory = category);
+                    },
+                    selectedColor: accent,
+                    backgroundColor: panel,
+                    labelStyle: TextStyle(
+                      color: selected ? bg : Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                const Text(
+                  'Products',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '${products.length} items',
+                  style: const TextStyle(color: accent),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: loading
+                ? const Center(child: CircularProgressIndicator())
+                : list.isEmpty
+                ? Center(
+                    child: Text(
+                      products.isEmpty
+                          ? 'No products added yet'
+                          : 'No matching products found',
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                  )
+                : RefreshIndicator(
+                    onRefresh: loadProducts,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(14, 0, 14, 90),
+                      itemCount: list.length,
+                      itemBuilder: (context, index) {
+                        final p = list[index];
+                        final quantity = (p['quantity'] as num).toDouble();
+                        final minStock = (p['min_stock'] as num).toDouble();
+
+                        final low = quantity <= minStock;
+
+                        return Card(
+                          color: const Color(0xFF172337),
+                          margin: const EdgeInsets.only(bottom: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(13),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Builder(
+                                      builder: (_) {
+                                        final photo = (p['image_path'] ?? '')
+                                            .toString();
+                                        final hasPhoto =
+                                            photo.isNotEmpty &&
+                                            File(photo).existsSync();
+                                        return CircleAvatar(
+                                          radius: 25,
+                                          backgroundColor: const Color(
+                                            0xFF21443F,
+                                          ),
+                                          backgroundImage: hasPhoto
+                                              ? FileImage(File(photo))
+                                              : null,
+                                          child: hasPhoto
+                                              ? null
+                                              : const Icon(
+                                                  Icons.inventory_2,
+                                                  color: const Color(
+                                                    0xFF41D6B5,
+                                                  ),
+                                                ),
+                                        );
+                                      },
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            '${p['name']}',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 15,
+                                            ),
+                                          ),
+                                          Text(
+                                            '${p['category'] ?? 'Uncategorized'} • SKU: ${p['sku'] ?? '—'}',
+                                            style: const TextStyle(
+                                              color: Colors.white60,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    PopupMenuButton<String>(
+                                      icon: const Icon(
+                                        Icons.more_vert,
+                                        color: Colors.white70,
+                                      ),
+                                      onSelected: (value) {
+                                        if (value == 'edit') {
+                                          openForm(product: p);
+                                        } else if (value == 'delete') {
+                                          deleteProduct(p);
+                                        }
+                                      },
+                                      itemBuilder: (_) => const [
+                                        PopupMenuItem(
+                                          value: 'edit',
+                                          child: Text('Edit Product'),
+                                        ),
+                                        PopupMenuItem(
+                                          value: 'delete',
+                                          child: Text('Delete Product'),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                const Divider(color: Colors.white12),
+                                Wrap(
+                                  spacing: 18,
+                                  runSpacing: 8,
+                                  children: [
+                                    _detail(
+                                      'Sale Price',
+                                      money(p['sale_price']),
+                                    ),
+                                    _detail(
+                                      'Purchase',
+                                      money(p['purchase_price']),
+                                    ),
+                                    _detail(
+                                      'Stock',
+                                      '${quantity.toStringAsFixed(2)} ${p['unit']}',
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      low
+                                          ? Icons.warning_amber
+                                          : Icons.check_circle,
+                                      size: 15,
+                                      color: low ? Colors.orangeAccent : accent,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      low ? 'Low Stock' : 'In Stock',
+                                      style: TextStyle(
+                                        color: low
+                                            ? Colors.orangeAccent
+                                            : accent,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    Text(
+                                      'Min: ${minStock.toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                        color: Colors.white54,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _detail(String title, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(color: Colors.white54, fontSize: 10),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class ProductFormScreen extends StatefulWidget {
+  final Map<String, dynamic>? product;
+
+  const ProductFormScreen({super.key, this.product});
+
+  @override
+  State<ProductFormScreen> createState() => _ProductFormScreenState();
+}
+
+class _ProductFormScreenState extends State<ProductFormScreen> {
+  final formKey = GlobalKey<FormState>();
+
+  late final TextEditingController name;
+  late final TextEditingController barcode;
+  late final TextEditingController sku;
+  late final TextEditingController category;
+  late final TextEditingController brand;
+  late final TextEditingController purchase;
+  late final TextEditingController sale;
+  late final TextEditingController taxPercent;
+  late final TextEditingController description;
+  String productStatus = 'Active';
+  late final TextEditingController quantity;
+  late final TextEditingController minStock;
+  late final TextEditingController unit;
+
+  bool saving = false;
+  String? imagePath;
+  final ImagePicker imagePicker = ImagePicker();
+  List<String> savedUnits = [];
+  List<String> savedCategories = [];
+
+  bool get editing => widget.product != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final p = widget.product;
+    imagePath = p?['image_path']?.toString();
+
+    name = TextEditingController(text: p?['name']?.toString() ?? '');
+    barcode = TextEditingController(text: p?['barcode']?.toString() ?? '');
+    sku = TextEditingController(text: p?['sku']?.toString() ?? '');
+    category = TextEditingController(text: p?['category']?.toString() ?? '');
+    brand = TextEditingController(text: p?['brand']?.toString() ?? '');
+    taxPercent = TextEditingController(
+      text: p?['tax_percent']?.toString() ?? '0',
+    );
+    description = TextEditingController(
+      text: p?['description']?.toString() ?? '',
+    );
+    productStatus = p?['status']?.toString() ?? 'Active';
+    if (!['Active', 'Inactive'].contains(productStatus)) {
+      productStatus = 'Active';
+    }
+    purchase = TextEditingController(
+      text: p?['purchase_price']?.toString() ?? '',
+    );
+    sale = TextEditingController(text: p?['sale_price']?.toString() ?? '');
+    quantity = TextEditingController(text: p?['quantity']?.toString() ?? '0');
+    minStock = TextEditingController(text: p?['min_stock']?.toString() ?? '0');
+    unit = TextEditingController(text: p?['unit']?.toString() ?? 'pcs');
+    loadSavedUnits();
+    loadSavedCategories();
+    retrieveLostProductImage();
+  }
+
+  Future<void> retrieveLostProductImage() async {
+    try {
+      final response = await imagePicker.retrieveLostData();
+      if (response.isEmpty ||
+          response.files == null ||
+          response.files!.isEmpty) {
+        return;
+      }
+
+      await processProductImage(response.files!.first);
+    } catch (e) {
+      debugPrint('Photo recovery failed: $e');
+    }
+  }
+
+  Future<void> loadSavedCategories() async {
+    final db = await AppDatabase.instance.database;
+    final rows = await db.query(
+      'product_categories',
+      orderBy: 'name COLLATE NOCASE',
+    );
+    if (!mounted) return;
+    setState(() {
+      savedCategories = rows.map((r) => r['name'].toString()).toList();
+    });
+  }
+
+  Future<void> addProductCategory() async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Add Product Category'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Category Name',
+            hintText: 'e.g. Grocery, Drinks, Clothing',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final value = controller.text.trim();
+              if (value.isNotEmpty) {
+                Navigator.pop(dialogContext, value);
+              }
+            },
+            child: const Text('Save Category'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+
+    if (result == null || result.trim().isEmpty) return;
+
+    final value = result.trim();
+    final db = await AppDatabase.instance.database;
+    try {
+      await db.insert('product_categories', {
+        'name': value,
+        'created_at': DateTime.now().toIso8601String(),
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
+      await loadSavedCategories();
+      if (!mounted) return;
+
+      if (savedCategories.any((v) => v.toLowerCase() == value.toLowerCase())) {
+        setState(() {
+          category.text = savedCategories.firstWhere(
+            (v) => v.toLowerCase() == value.toLowerCase(),
+          );
+        });
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('$value category selected')));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Could not save category: $e')));
+    }
+  }
+
+  Future<void> loadSavedUnits() async {
+    final db = await AppDatabase.instance.database;
+    final rows = await db.query(
+      'measurement_units',
+      orderBy: 'name COLLATE NOCASE',
+    );
+    if (!mounted) return;
+    setState(() {
+      savedUnits = rows.map((row) => row['name'].toString()).toList();
+    });
+  }
+
+  Future<void> addCustomUnit() async {
+    final controller = TextEditingController();
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Add Custom Unit'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Unit Name',
+            hintText: 'e.g. Tray, Glass, Bundle',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final value = controller.text.trim();
+              if (value.isNotEmpty) {
+                Navigator.pop(dialogContext, value);
+              }
+            },
+            child: const Text('Save Unit'),
+          ),
+        ],
+      ),
+    );
+
+    controller.dispose();
+    if (result == null || result.trim().isEmpty) return;
+
+    final value = result.trim();
+    final db = await AppDatabase.instance.database;
+
+    await db.insert('measurement_units', {
+      'name': value,
+      'created_at': DateTime.now().toIso8601String(),
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
+
+    await loadSavedUnits();
+
+    if (!mounted) return;
+    setState(() => unit.text = value);
+
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('$value unit saved')));
+  }
+
+  @override
+  void dispose() {
+    name.dispose();
+    barcode.dispose();
+    sku.dispose();
+    category.dispose();
+    brand.dispose();
+    purchase.dispose();
+    sale.dispose();
+    taxPercent.dispose();
+    description.dispose();
+    quantity.dispose();
+    minStock.dispose();
+    unit.dispose();
+    super.dispose();
+  }
+
+  String? requiredText(String? value) {
+    if (value == null || value.trim().isEmpty) return 'Required field';
+    return null;
+  }
+
+  String? validNumber(String? value) {
+    final n = double.tryParse(value?.trim() ?? '');
+    if (n == null || n < 0) return 'Enter a valid amount (0 or more)';
+    return null;
+  }
+
+  Widget field(
+    String label,
+    TextEditingController controller, {
+    String? Function(String?)? validator,
+    TextInputType keyboard = TextInputType.text,
+    String? hint,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 13),
+      child: TextFormField(
+        controller: controller,
+        validator: validator,
+        keyboardType: keyboard,
+        style: const TextStyle(color: Color(0xFF172033)),
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hint,
+          labelStyle: const TextStyle(color: Color(0xFF64748B)),
+          hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+          filled: true,
+          fillColor: const Color(0xFFF1F5F9),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFF16A34A)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  double get profitPerUnit {
+    final buy = double.tryParse(purchase.text.trim()) ?? 0;
+    final sell = double.tryParse(sale.text.trim()) ?? 0;
+    return sell - buy;
+  }
+
+  String? validOptionalNumber(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    return validNumber(value);
+  }
+
+  Future<void> generateBarcode() async {
+    final db = await AppDatabase.instance.database;
+    String code;
+
+    do {
+      code = 'OB${DateTime.now().microsecondsSinceEpoch}';
+      final found = await db.query(
+        'products',
+        columns: ['id'],
+        where:
+            'LOWER(TRIM(COALESCE(barcode, '
+            '))) = LOWER(?) OR LOWER(TRIM(COALESCE(sku, '
+            '))) = LOWER(?)',
+        whereArgs: [code, code],
+        limit: 1,
+      );
+      if (found.isEmpty) break;
+      await Future<void>.delayed(const Duration(microseconds: 10));
+    } while (true);
+
+    if (!mounted) return;
+    setState(() => barcode.text = code);
+  }
+
+  Future<void> pickProductImage(ImageSource source) async {
+    try {
+      final XFile? picked = await imagePicker.pickImage(
+        source: source,
+        imageQuality: 90,
+        maxWidth: 2000,
+        maxHeight: 2000,
+      );
+      if (picked == null) return;
+      await processProductImage(picked);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Photo select nahi ho saki: $e')));
+    }
+  }
+
+  Future<void> processProductImage(XFile picked) async {
+    try {
+      final CroppedFile? cropped = await ImageCropper().cropImage(
+        sourcePath: picked.path,
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Crop Product Photo',
+            toolbarColor: const Color(0xFF101C2E),
+            toolbarWidgetColor: Colors.white,
+            initAspectRatio: CropAspectRatioPreset.original,
+            lockAspectRatio: false,
+            aspectRatioPresets: [
+              CropAspectRatioPreset.original,
+              CropAspectRatioPreset.square,
+              CropAspectRatioPreset.ratio4x3,
+              CropAspectRatioPreset.ratio16x9,
+            ],
+          ),
+        ],
+      );
+
+      if (cropped == null) return;
+      final sourcePath = cropped.path;
+
+      final appDir = await getApplicationDocumentsDirectory();
+      final imageDir = Directory('${appDir.path}/product_images');
+      await imageDir.create(recursive: true);
+
+      final extension = sourcePath.contains('.')
+          ? sourcePath.split('.').last.toLowerCase()
+          : 'jpg';
+      final destination =
+          '${imageDir.path}/product_${DateTime.now().microsecondsSinceEpoch}.$extension';
+      final savedFile = await File(sourcePath).copy(destination);
+
+      if (!mounted) return;
+      setState(() => imagePath = savedFile.path);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Photo process nahi ho saki: $e')));
+    }
+  }
+
+  Widget productPhotoSection() {
+    final hasPhoto =
+        imagePath != null &&
+        imagePath!.isNotEmpty &&
+        File(imagePath!).existsSync();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Color(0x1F172033)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Product Photo',
+            style: TextStyle(
+              color: Color(0xFF172033),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            height: 170,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: const Color(0xFF0B1220),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: hasPhoto
+                ? Image.file(File(imagePath!), fit: BoxFit.contain)
+                : const Center(
+                    child: Icon(
+                      Icons.add_a_photo_outlined,
+                      color: const Color(0xFF41D6B5),
+                      size: 48,
+                    ),
+                  ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: saving
+                    ? null
+                    : () => pickProductImage(ImageSource.gallery),
+                icon: const Icon(Icons.photo_library_outlined),
+                label: const Text('Gallery'),
+              ),
+              OutlinedButton.icon(
+                onPressed: saving
+                    ? null
+                    : () => pickProductImage(ImageSource.camera),
+                icon: const Icon(Icons.camera_alt_outlined),
+                label: const Text('Camera'),
+              ),
+              if (imagePath != null && imagePath!.isNotEmpty)
+                TextButton.icon(
+                  onPressed: saving
+                      ? null
+                      : () => setState(() => imagePath = null),
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('Remove'),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> saveProduct() async {
+    if (!formKey.currentState!.validate()) return;
+
+    setState(() => saving = true);
+
+    try {
+      final db = await AppDatabase.instance.database;
+      final barcodeValue = barcode.text.trim();
+      final skuValue = sku.text.trim();
+
+      for (final code in [barcodeValue, skuValue].where((v) => v.isNotEmpty)) {
+        final duplicate = await db.query(
+          'products',
+          columns: ['id'],
+          where: widget.product == null
+              ? "LOWER(TRIM(COALESCE(barcode, ''))) = LOWER(?) OR LOWER(TRIM(COALESCE(sku, ''))) = LOWER(?)"
+              : "(LOWER(TRIM(COALESCE(barcode, ''))) = LOWER(?) OR LOWER(TRIM(COALESCE(sku, ''))) = LOWER(?)) AND id != ?",
+          whereArgs: widget.product == null
+              ? [code, code]
+              : [code, code, widget.product!['id']],
+          limit: 1,
+        );
+
+        if (duplicate.isNotEmpty) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Barcode / SKU "$code" already exists.')),
+          );
+          setState(() => saving = false);
+          return;
+        }
+      }
+
+      final now = DateTime.now().toIso8601String();
+
+      final newQuantity = double.parse(quantity.text.trim());
+      final oldQuantity =
+          (widget.product?['quantity'] as num?)?.toDouble() ?? 0;
+      final productId = widget.product?['id'] as int?;
+
+      await db.transaction((txn) async {
+        await txn.insert('measurement_units', {
+          'name': unit.text.trim().isEmpty ? 'pcs' : unit.text.trim(),
+          'created_at': now,
+        }, conflictAlgorithm: ConflictAlgorithm.ignore);
+
+        final values = <String, Object?>{
+          'name': name.text.trim(),
+          'barcode': barcode.text.trim().isEmpty ? null : barcode.text.trim(),
+          'sku': sku.text.trim().isEmpty ? null : sku.text.trim(),
+          'category': category.text.trim().isEmpty
+              ? null
+              : category.text.trim(),
+          'brand': brand.text.trim().isEmpty ? null : brand.text.trim(),
+          'purchase_price': double.parse(purchase.text.trim()),
+          'sale_price': double.parse(sale.text.trim()),
+          'tax_percent': taxPercent.text.trim().isEmpty
+              ? 0.0
+              : double.parse(taxPercent.text.trim()),
+          'status': productStatus,
+          'description': description.text.trim().isEmpty
+              ? null
+              : description.text.trim(),
+          'quantity': newQuantity,
+          'min_stock': double.parse(minStock.text.trim()),
+          'unit': unit.text.trim().isEmpty ? 'pcs' : unit.text.trim(),
+          'image_path': imagePath,
+        };
+
+        late int id;
+
+        if (editing) {
+          id = productId!;
+          await txn.update(
+            'products',
+            values,
+            where: 'id = ?',
+            whereArgs: [id],
+          );
+        } else {
+          values['created_at'] = now;
+          id = await txn.insert('products', values);
+        }
+
+        final difference = newQuantity - oldQuantity;
+
+        if (difference != 0) {
+          await txn.insert('stock_movements', {
+            'product_id': id,
+            'movement_type': editing ? 'Adjustment' : 'Opening Stock',
+            'quantity': difference,
+            'note': editing
+                ? 'Stock adjusted while editing product'
+                : 'Initial product stock',
+            'movement_date': now,
+          });
+        }
+      });
+
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Could not save product: $e')));
+      setState(() => saving = false);
+    }
+  }
+
+  Widget formSection(String title, List<Widget> children) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: Color(0xFF172033),
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 14),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget twoFields(Widget first, Widget second) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: first),
+        const SizedBox(width: 12),
+        Expanded(child: second),
+      ],
+    );
+  }
+
+  void resetProductForm() {
+    setState(() {
+      name.clear();
+      barcode.clear();
+      sku.clear();
+      category.clear();
+      brand.clear();
+      purchase.clear();
+      sale.clear();
+      taxPercent.text = '0';
+      description.clear();
+      quantity.text = '0';
+      minStock.text = '0';
+      unit.text = 'pcs';
+      productStatus = 'Active';
+      imagePath = null;
+    });
+  }
+
+  void showProductStatusPreview() {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Product Status Preview'),
+        content: Text(
+          'Product: ${name.text.trim().isEmpty ? 'Not entered' : name.text.trim()}\n'
+          'Status: $productStatus\n'
+          'Purchase Price: Rs. ${purchase.text}\n'
+          'Sale Price: Rs. ${sale.text}\n'
+          'Profit Per Unit: Rs. ${profitPerUnit.toStringAsFixed(2)}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final unitOptions = <String>{
+      'Kg',
+      'Gram',
+      'Litre',
+      'ML',
+      'Piece',
+      'Packet',
+      'Dozen',
+      'Box',
+      'Plate',
+      ...savedUnits,
+      if (unit.text.trim().isNotEmpty) unit.text.trim(),
+    }.toList()..sort();
+
+    InputDecoration dropdownDecoration(String label) => InputDecoration(
+      labelText: label,
+      filled: true,
+      fillColor: const Color(0xFFF8FAFC),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(11),
+        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(11),
+        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+      ),
+    );
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FA),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF172033),
+        elevation: 0,
+        title: Text(
+          editing ? 'Edit Product' : 'Add New Product',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ),
+      body: Form(
+        key: formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Add New Product',
+                    style: TextStyle(
+                      fontSize: 21,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF172033),
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDCFCE7),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    'New Product',
+                    style: TextStyle(
+                      color: Color(0xFF15803D),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            formSection('Product Information', [
+              field('Product Name *', name, validator: requiredText),
+              twoFields(
+                field('Barcode', barcode),
+                field('SKU / Product Code', sku),
+              ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: OutlinedButton.icon(
+                    onPressed: saving ? null : generateBarcode,
+                    icon: const Icon(Icons.qr_code_2),
+                    label: const Text('Auto Generate Barcode'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF15803D),
+                    ),
+                  ),
+                ),
+              ),
+              twoFields(
+                DropdownButtonFormField<String>(
+                  value: savedCategories.contains(category.text.trim())
+                      ? category.text.trim()
+                      : null,
+                  decoration: dropdownDecoration('Category *'),
+                  hint: const Text('Select Category'),
+                  validator: (_) => category.text.trim().isEmpty
+                      ? 'Please select a category'
+                      : null,
+                  items: savedCategories
+                      .map((v) => DropdownMenuItem(value: v, child: Text(v)))
+                      .toList(),
+                  onChanged: saving
+                      ? null
+                      : (v) => setState(() => category.text = v ?? ''),
+                ),
+                field('Brand', brand, hint: 'Enter brand name'),
+              ),
+              Row(
+                children: [
+                  TextButton.icon(
+                    onPressed: saving ? null : addProductCategory,
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Add Category'),
+                  ),
+                  TextButton(
+                    onPressed: saving
+                        ? null
+                        : () => setState(() => category.clear()),
+                    child: const Text('Clear'),
+                  ),
+                ],
+              ),
+              twoFields(
+                DropdownButtonFormField<String>(
+                  value: unitOptions.contains(unit.text) ? unit.text : null,
+                  decoration: dropdownDecoration('Unit *'),
+                  items: unitOptions
+                      .map((v) => DropdownMenuItem(value: v, child: Text(v)))
+                      .toList(),
+                  onChanged: saving
+                      ? null
+                      : (v) => setState(() => unit.text = v ?? 'pcs'),
+                ),
+                DropdownButtonFormField<String>(
+                  value: productStatus,
+                  decoration: dropdownDecoration('Product Status'),
+                  items: const [
+                    DropdownMenuItem(value: 'Active', child: Text('Active')),
+                    DropdownMenuItem(
+                      value: 'Inactive',
+                      child: Text('Inactive'),
+                    ),
+                  ],
+                  onChanged: saving
+                      ? null
+                      : (v) => setState(() => productStatus = v ?? 'Active'),
+                ),
+              ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: saving ? null : addCustomUnit,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Add Custom Unit'),
+                ),
+              ),
+            ]),
+
+            formSection('Pricing Information', [
+              twoFields(
+                field(
+                  'Purchase Price (Rs.) *',
+                  purchase,
+                  validator: validNumber,
+                  keyboard: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                ),
+                field(
+                  'Sale Price (Rs.) *',
+                  sale,
+                  validator: validNumber,
+                  keyboard: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                ),
+              ),
+              twoFields(
+                field(
+                  'Tax (%)',
+                  taxPercent,
+                  validator: validOptionalNumber,
+                  keyboard: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                ),
+                Container(
+                  margin: const EdgeInsets.only(bottom: 13),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 17,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFECFDF5),
+                    borderRadius: BorderRadius.circular(11),
+                    border: Border.all(color: const Color(0xFFBBF7D0)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Profit Per Unit',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF166534),
+                        ),
+                      ),
+                      const SizedBox(height: 7),
+                      Text(
+                        'Rs. ${profitPerUnit.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF15803D),
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ]),
+
+            formSection('Stock Information', [
+              twoFields(
+                field(
+                  'Opening Stock *',
+                  quantity,
+                  validator: validNumber,
+                  keyboard: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                ),
+                field(
+                  'Low Stock Alert',
+                  minStock,
+                  validator: validOptionalNumber,
+                  keyboard: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                ),
+              ),
+            ]),
+
+            formSection('Additional Details', [
+              field(
+                'Product Description',
+                description,
+                hint: 'Enter product details (optional)',
+              ),
+            ]),
+
+            formSection('Product Image', [productPhotoSection()]),
+
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: saving ? null : resetProductForm,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      foregroundColor: const Color(0xFF172033),
+                    ),
+                    child: const Text('Reset'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: showProductStatusPreview,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      foregroundColor: const Color(0xFF172033),
+                    ),
+                    child: const Text('Preview Status'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 52,
+              child: FilledButton(
+                onPressed: saving ? null : saveProduct,
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF111827),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: saving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        editing ? 'Update Product' : 'Add Product',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ProductCategoryManagementScreen extends StatefulWidget {
+  const ProductCategoryManagementScreen({super.key});
+
+  @override
+  State<ProductCategoryManagementScreen> createState() =>
+      _ProductCategoryManagementScreenState();
+}
+
+class _ProductCategoryManagementScreenState
+    extends State<ProductCategoryManagementScreen> {
+  static const bg = Color(0xFF0B1220);
+  static const panel = Color(0xFF172337);
+  static const accent = Color(0xFF41D6B5);
+
+  List<Map<String, dynamic>> categories = [];
+  bool loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    loadCategories();
+  }
+
+  Future<void> loadCategories() async {
+    final db = await AppDatabase.instance.database;
+    final rows = await db.query(
+      'product_categories',
+      orderBy: 'name COLLATE NOCASE',
+    );
+    if (!mounted) return;
+    setState(() {
+      categories = rows;
+      loading = false;
+    });
+  }
+
+  Future<void> editCategory(Map<String, dynamic> item) async {
+    final controller = TextEditingController(text: item['name'].toString());
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Edit Category'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Category Name'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final value = controller.text.trim();
+              if (value.isNotEmpty) {
+                Navigator.pop(dialogContext, value);
+              }
+            },
+            child: const Text('Update'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+
+    if (result == null || result.trim().isEmpty) return;
+    final oldName = item['name'].toString();
+    final newName = result.trim();
+    if (oldName == newName) return;
+
+    final db = await AppDatabase.instance.database;
+    try {
+      await db.transaction((txn) async {
+        await txn.update(
+          'product_categories',
+          {'name': newName},
+          where: 'id = ?',
+          whereArgs: [item['id']],
+        );
+        await txn.update(
+          'products',
+          {'category': newName},
+          where: 'category = ?',
+          whereArgs: [oldName],
+        );
+      });
+      await loadCategories();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Category updated successfully')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Category name already exists or update failed: $e'),
+        ),
+      );
+    }
+  }
+
+  Future<void> addCategory() async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Add Category'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Category Name',
+            hintText: 'e.g. Grocery, Bakery, Drinks',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final value = controller.text.trim();
+              if (value.isNotEmpty) {
+                Navigator.pop(dialogContext, value);
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+
+    if (result == null || result.trim().isEmpty) return;
+    final db = await AppDatabase.instance.database;
+    try {
+      final id = await db.insert('product_categories', {
+        'name': result.trim(),
+        'created_at': DateTime.now().toIso8601String(),
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
+      await loadCategories();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            id == 0 ? 'This category already exists' : 'Category added',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Could not add category: $e')));
+    }
+  }
+
+  Future<void> deleteCategory(Map<String, dynamic> item) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Category?'),
+        content: Text(
+          'Delete "${item['name']}"? Its products will remain safe and become Uncategorized. Old bills will not change.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    final db = await AppDatabase.instance.database;
+
+    await db.transaction((txn) async {
+      await txn.update(
+        'products',
+        {'category': null},
+        where: 'category = ?',
+        whereArgs: [item['name']],
+      );
+
+      await txn.delete(
+        'product_categories',
+        where: 'id = ?',
+        whereArgs: [item['id']],
+      );
+    });
+
+    await loadCategories();
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Category deleted successfully')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: bg,
+      appBar: AppBar(
+        backgroundColor: bg,
+        foregroundColor: Colors.white,
+        title: const Text('Product Categories'),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: addCategory,
+        backgroundColor: accent,
+        foregroundColor: bg,
+        icon: const Icon(Icons.add),
+        label: const Text('Add Category'),
+      ),
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : categories.isEmpty
+          ? const Center(
+              child: Text(
+                'No categories yet. Add your first category.',
+                style: TextStyle(color: Colors.white70),
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 90),
+              itemCount: categories.length,
+              itemBuilder: (context, index) {
+                final item = categories[index];
+                return Card(
+                  color: const Color(0xFF172337),
+                  child: ListTile(
+                    leading: const CircleAvatar(
+                      backgroundColor: Color(0xFF21443F),
+                      child: Icon(Icons.category, color: accent),
+                    ),
+                    title: Text(
+                      item['name'].toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    trailing: PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert, color: Colors.white70),
+                      onSelected: (value) {
+                        if (value == 'edit') {
+                          editCategory(item);
+                        } else if (value == 'delete') {
+                          deleteCategory(item);
+                        }
+                      },
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(
+                          value: 'edit',
+                          child: Text('Edit Category'),
+                        ),
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Text('Delete Category'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+}

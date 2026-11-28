@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../database/app_database.dart';
 
 class ExpenseManagementScreen extends StatefulWidget {
@@ -74,6 +76,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
   final historySearchController = TextEditingController();
   int? editingExpenseId;
   bool isLoadingHistory = false;
+  String? attachmentPath;
 
   double get amount => double.tryParse(amountController.text) ?? 0;
   double get paid => double.tryParse(paidController.text) ?? 0;
@@ -165,37 +168,72 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
     controller.dispose();
   }
 
+  Future<void> deleteOption({
+    required String label,
+    required List<String> options,
+    required String selected,
+    required VoidCallback onDelete,
+  }) async {
+    if (options.length <= 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('At least one option must remain.')),
+      );
+      return;
+    }
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Delete $label?'),
+        content: Text('Delete "$selected"? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      setState(onDelete);
+    }
+  }
+
   Widget sectionButton(String title, IconData icon) {
     final selected = selectedSection == title;
-    return Expanded(
-      child: InkWell(
-        onTap: () => setState(() => selectedSection = title),
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 4),
-          decoration: BoxDecoration(
-            color: selected ? const Color(0xFF173F73) : Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: selected ? const Color(0xFF173F73) : Colors.grey.shade300,
-            ),
+    return InkWell(
+      onTap: () => setState(() => selectedSection = title),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 3),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF173F73) : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected ? const Color(0xFF173F73) : Colors.grey.shade300,
           ),
-          child: Column(
-            children: [
-              Icon(icon,
-                  color: selected ? Colors.white : const Color(0xFF173F73)),
-              const SizedBox(height: 5),
-              Text(
-                title,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon,
+                size: 21,
+                color: selected ? Colors.white : const Color(0xFF173F73)),
+            const SizedBox(height: 4),
+            Text(title,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 9,
                   fontWeight: FontWeight.w600,
                   color: selected ? Colors.white : Colors.black87,
-                ),
-              ),
-            ],
-          ),
+                )),
+          ],
         ),
       ),
     );
@@ -239,8 +277,9 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
           decoration: InputDecoration(
             hintText: hint ?? 'Enter $label',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            isDense: true,
             contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+                const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
           ),
         ),
       ],
@@ -253,6 +292,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
     required List<String> items,
     required ValueChanged<String?> onChanged,
     VoidCallback? onAdd,
+    VoidCallback? onDelete,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -268,8 +308,9 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
+                  isDense: true,
                   contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                 ),
                 items: items
                     .map((item) => DropdownMenuItem(
@@ -281,11 +322,29 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
               ),
             ),
             if (onAdd != null) ...[
-              const SizedBox(width: 7),
-              IconButton.filledTonal(
+              const SizedBox(width: 4),
+              TextButton.icon(
                 onPressed: onAdd,
-                icon: const Icon(Icons.add),
-                tooltip: 'Add $label',
+                icon: const Icon(Icons.add, size: 14),
+                label: const Text('Add'),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 5),
+                  minimumSize: const Size(0, 34),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ],
+            if (onDelete != null) ...[
+              IconButton(
+                tooltip: 'Delete selected option',
+                onPressed: onDelete,
+                icon: const Icon(Icons.delete_outline,
+                    size: 19, color: Colors.red),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(
+                  minWidth: 32,
+                  minHeight: 34,
+                ),
               ),
             ],
           ],
@@ -297,24 +356,73 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
   Widget formCard({required String title, required Widget child}) {
     return Card(
       elevation: 1,
-      margin: const EdgeInsets.only(bottom: 13),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
+      margin: const EdgeInsets.only(bottom: 9),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(11),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(title,
                 style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF173F73))),
-            const SizedBox(height: 15),
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF173F73),
+                )),
+            const SizedBox(height: 10),
             child,
           ],
         ),
       ),
     );
+  }
+
+  Future<void> pickExpenseAttachment() async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Wrap(children: [
+          ListTile(
+            leading: const Icon(Icons.photo_library_outlined),
+            title: const Text('Choose Photo'),
+            onTap: () => Navigator.pop(context, 'photo'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.picture_as_pdf_outlined),
+            title: const Text('Choose PDF'),
+            onTap: () => Navigator.pop(context, 'pdf'),
+          ),
+        ]),
+      ),
+    );
+
+    if (choice == null || !mounted) return;
+
+    try {
+      String? path;
+      if (choice == 'photo') {
+        final image = await ImagePicker().pickImage(
+          source: ImageSource.gallery,
+          imageQuality: 90,
+        );
+        path = image?.path;
+      } else {
+        final result = await FilePicker.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['pdf'],
+        );
+        path = result?.files.single.path;
+      }
+
+      if (path != null && mounted) {
+        setState(() => attachmentPath = path);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Attachment select nahi hui: $e')),
+      );
+    }
   }
 
   void resetForm() {
@@ -332,6 +440,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
       paymentStatus = 'Paid';
       frequency = 'One Time';
       editingExpenseId = null;
+      attachmentPath = null;
     });
   }
 
@@ -369,6 +478,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
           paymentStatus: paymentStatus,
           paidAmount: paidAmount,
           frequency: frequency,
+          attachmentPath: attachmentPath,
         );
       } else {
         await AppDatabase.instance.updateExpense(
@@ -386,6 +496,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
           paymentStatus: paymentStatus,
           paidAmount: paidAmount,
           frequency: frequency,
+          attachmentPath: attachmentPath,
         );
       }
 
@@ -432,6 +543,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
       }
 
       editingExpenseId = id;
+      attachmentPath = record['attachment_path']?.toString();
       mainCategory = main;
       typeCategory = typeCat;
       expenseType = type;
@@ -459,60 +571,57 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF3F5F8),
       appBar: AppBar(
+        toolbarHeight: 55,
         backgroundColor: const Color(0xFF173F73),
         foregroundColor: Colors.white,
         title: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('OmniBizCRM', style: TextStyle(fontSize: 17)),
+            Text('OmniBizCRM', style: TextStyle(fontSize: 15)),
             Text('Expense Management',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.normal)),
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.normal)),
           ],
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(10),
         children: [
-          Row(
-            children: [
-              sectionButton('New Expense', Icons.add_circle_outline),
-              const SizedBox(width: 7),
-              sectionButton('Expense Reports', Icons.bar_chart),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final tileWidth = (constraints.maxWidth - 24) / 4;
+              return Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  SizedBox(
+                      width: tileWidth,
+                      child: sectionButton(
+                          'New Expense', Icons.add_circle_outline)),
+                  SizedBox(
+                      width: tileWidth,
+                      child: sectionButton('Expense Reports', Icons.bar_chart)),
+                  SizedBox(
+                      width: tileWidth,
+                      child: sectionButton('Expense History', Icons.history)),
+                  SizedBox(
+                      width: tileWidth,
+                      child: sectionButton(
+                          'Manage Categories', Icons.category_outlined)),
+                ],
+              );
+            },
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              sectionButton('Expense History', Icons.history),
-              const SizedBox(width: 7),
-              sectionButton('Manage Categories', Icons.category_outlined),
-            ],
-          ),
-          const SizedBox(height: 15),
+          const SizedBox(height: 12),
           if (selectedSection == 'New Expense') ...[
             Form(
               key: _formKey,
               child: Column(
                 children: [
                   formCard(
-                    title: 'Add New Expense',
+                    title: 'New Expense',
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        fieldLabel('Expense Date', required: true),
-                        InkWell(
-                          onTap: chooseDate,
-                          child: InputDecorator(
-                            decoration: InputDecoration(
-                              border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10)),
-                              suffixIcon: const Icon(Icons.calendar_month),
-                            ),
-                            child: Text(
-                                DateFormat('dd MMMM yyyy').format(expenseDate)),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
                         dropdownField(
                           label: 'Main Expense Category',
                           value: mainCategory,
@@ -524,19 +633,32 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                               expenseType = expenseTypes[typeCategory]!.first;
                             });
                           },
-                          onAdd: () => addOption(
-                            'Main Category',
-                            mainCategories,
-                            (v) {
-                              typeCategories[v] = ['General'];
-                              expenseTypes['General'] = ['Other Expense'];
-                              mainCategory = v;
-                              typeCategory = 'General';
-                              expenseType = 'Other Expense';
+                          onAdd: () =>
+                              addOption('Main Category', mainCategories, (v) {
+                            typeCategories[v] = ['General'];
+                            expenseTypes['General'] = ['Other Expense'];
+                            mainCategory = v;
+                            typeCategory = 'General';
+                            expenseType = 'Other Expense';
+                          }),
+                          onDelete: () => deleteOption(
+                            label: 'Main Category',
+                            options: mainCategories,
+                            selected: mainCategory,
+                            onDelete: () {
+                              mainCategories.remove(mainCategory);
+                              typeCategories.remove(mainCategory);
+                              mainCategory = mainCategories.first;
+                              typeCategory =
+                                  (typeCategories[mainCategory] ?? ['General'])
+                                      .first;
+                              expenseType = (expenseTypes[typeCategory] ??
+                                      ['Other Expense'])
+                                  .first;
                             },
                           ),
                         ),
-                        const SizedBox(height: 15),
+                        const SizedBox(height: 9),
                         dropdownField(
                           label: 'Expense Type Category',
                           value: typeCategory,
@@ -549,25 +671,43 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                             });
                           },
                           onAdd: () => addOption(
-                            'Type Category',
-                            typeCategoryOptions,
-                            (v) {
-                              expenseTypes[v] = ['Other Expense'];
-                              typeCategory = v;
-                              expenseType = 'Other Expense';
+                              'Type Category', typeCategoryOptions, (v) {
+                            expenseTypes[v] = ['Other Expense'];
+                            typeCategory = v;
+                            expenseType = 'Other Expense';
+                          }),
+                          onDelete: () => deleteOption(
+                            label: 'Type Category',
+                            options: typeCategoryOptions,
+                            selected: typeCategory,
+                            onDelete: () {
+                              typeCategoryOptions.remove(typeCategory);
+                              expenseTypes.remove(typeCategory);
+                              typeCategory = typeCategoryOptions.first;
+                              expenseType = (expenseTypes[typeCategory] ??
+                                      ['Other Expense'])
+                                  .first;
                             },
                           ),
                         ),
-                        const SizedBox(height: 15),
+                        const SizedBox(height: 9),
                         dropdownField(
                           label: 'Expense Type',
                           value: expenseType,
                           items: expenseTypeOptions,
                           onChanged: (v) => setState(() => expenseType = v!),
                           onAdd: () => addOption(
-                            'Expense Type',
-                            expenseTypeOptions,
-                            (v) => expenseType = v,
+                              'Expense Type', expenseTypeOptions, (v) {
+                            expenseType = v;
+                          }),
+                          onDelete: () => deleteOption(
+                            label: 'Expense Type',
+                            options: expenseTypeOptions,
+                            selected: expenseType,
+                            onDelete: () {
+                              expenseTypeOptions.remove(expenseType);
+                              expenseType = expenseTypeOptions.first;
+                            },
                           ),
                         ),
                       ],
@@ -587,14 +727,32 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                           required: true,
                           onChanged: (_) => setState(() {}),
                         ),
-                        const SizedBox(height: 15),
+                        const SizedBox(height: 9),
+                        fieldLabel('Expense Date', required: true),
+                        InkWell(
+                          onTap: chooseDate,
+                          child: InputDecorator(
+                            decoration: InputDecoration(
+                              isDense: true,
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(9)),
+                              suffixIcon:
+                                  const Icon(Icons.calendar_month, size: 20),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 11, vertical: 10),
+                            ),
+                            child: Text(
+                                DateFormat('dd MMM yyyy').format(expenseDate)),
+                          ),
+                        ),
+                        const SizedBox(height: 9),
                         dropdownField(
                           label: 'Payment Method',
                           value: paymentMethod,
                           items: const ['Cash', 'Bank', 'Online'],
                           onChanged: (v) => setState(() => paymentMethod = v!),
                         ),
-                        const SizedBox(height: 15),
+                        const SizedBox(height: 9),
                         dropdownField(
                           label: 'Payment Status',
                           value: paymentStatus,
@@ -607,7 +765,7 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                           },
                         ),
                         if (paymentStatus == 'Partial') ...[
-                          const SizedBox(height: 15),
+                          const SizedBox(height: 9),
                           textField(
                             'Amount Paid (Rs.)',
                             paidController,
@@ -616,24 +774,24 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                             required: true,
                             onChanged: (_) => setState(() {}),
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 8),
                           Container(
                             width: double.infinity,
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.all(9),
                             decoration: BoxDecoration(
                               color: const Color(0xFFFFF3E0),
-                              borderRadius: BorderRadius.circular(9),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
                               'Remaining Amount: Rs. ${remaining.toStringAsFixed(2)}',
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 12),
                             ),
                           ),
                         ],
-                        const SizedBox(height: 15),
+                        const SizedBox(height: 9),
                         textField('Paid To / Vendor', vendorController),
-                        const SizedBox(height: 15),
+                        const SizedBox(height: 9),
                         dropdownField(
                           label: 'Expense Frequency',
                           value: frequency,
@@ -646,66 +804,64 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                           ],
                           onChanged: (v) => setState(() => frequency = v!),
                         ),
-                        const SizedBox(height: 15),
+                        const SizedBox(height: 9),
                         textField(
                           'Description / Notes',
                           descriptionController,
                           hint: 'Enter expense details...',
-                          maxLines: 3,
+                          maxLines: 2,
                         ),
-                        const SizedBox(height: 15),
+                        const SizedBox(height: 9),
                         fieldLabel('Upload Receipt / Invoice'),
-                        OutlinedButton.icon(
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                    'Receipt attachment will be connected in the next step.'),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.cloud_upload_outlined),
-                          label: const Text('Choose Photo / PDF'),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(double.infinity, 48),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: pickExpenseAttachment,
+                            icon: const Icon(Icons.cloud_upload_outlined,
+                                size: 18),
+                            label: const Text('Choose Photo / PDF'),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(double.infinity, 40),
+                            ),
                           ),
                         ),
+                        if (attachmentPath != null) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEAF1F8),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.attach_file,
+                                    color: Color(0xFF173F73), size: 18),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    attachmentPath!.split('/').last,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                                IconButton(
+                                  tooltip: 'Remove attachment',
+                                  visualDensity: VisualDensity.compact,
+                                  onPressed: () =>
+                                      setState(() => attachmentPath = null),
+                                  icon: const Icon(Icons.close,
+                                      color: Colors.red, size: 18),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: OutlinedButton.icon(
-                          onPressed: resetForm,
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Reset'),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(0, 50),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        flex: 4,
-                        child: ElevatedButton.icon(
-                          onPressed: saveExpense,
-                          icon: const Icon(Icons.save),
-                          label: Text(editingExpenseId == null
-                              ? 'Save Expense'
-                              : 'Update Expense'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF173F73),
-                            foregroundColor: Colors.white,
-                            minimumSize: const Size(0, 50),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  historySection(),
                 ],
               ),
             ),
@@ -717,49 +873,67 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
               child: const Column(
                 children: [
                   ListTile(
-                      leading: Icon(Icons.today),
-                      title: Text('Daily Expense Report'),
-                      trailing: Icon(Icons.chevron_right)),
+                    dense: true,
+                    leading: Icon(Icons.today),
+                    title: Text('Daily Expense Report'),
+                    trailing: Icon(Icons.chevron_right),
+                  ),
                   Divider(height: 1),
                   ListTile(
-                      leading: Icon(Icons.calendar_month),
-                      title: Text('Monthly Expense Report'),
-                      trailing: Icon(Icons.chevron_right)),
+                    dense: true,
+                    leading: Icon(Icons.calendar_month),
+                    title: Text('Monthly Expense Report'),
+                    trailing: Icon(Icons.chevron_right),
+                  ),
                   Divider(height: 1),
                   ListTile(
-                      leading: Icon(Icons.date_range),
-                      title: Text('Yearly Expense Report'),
-                      trailing: Icon(Icons.chevron_right)),
+                    dense: true,
+                    leading: Icon(Icons.date_range),
+                    title: Text('Yearly Expense Report'),
+                    trailing: Icon(Icons.chevron_right),
+                  ),
                   Divider(height: 1),
                   ListTile(
-                      leading: Icon(Icons.category),
-                      title: Text('Category Wise Report'),
-                      trailing: Icon(Icons.chevron_right)),
+                    dense: true,
+                    leading: Icon(Icons.category),
+                    title: Text('Category Wise Report'),
+                    trailing: Icon(Icons.chevron_right),
+                  ),
                   Divider(height: 1),
                   ListTile(
-                      leading: Icon(Icons.account_tree),
-                      title: Text('Expense Type Wise Report'),
-                      trailing: Icon(Icons.chevron_right)),
+                    dense: true,
+                    leading: Icon(Icons.account_tree),
+                    title: Text('Expense Type Wise Report'),
+                    trailing: Icon(Icons.chevron_right),
+                  ),
                   Divider(height: 1),
                   ListTile(
-                      leading: Icon(Icons.store),
-                      title: Text('Branch Wise Report'),
-                      trailing: Icon(Icons.chevron_right)),
+                    dense: true,
+                    leading: Icon(Icons.store),
+                    title: Text('Branch Wise Report'),
+                    trailing: Icon(Icons.chevron_right),
+                  ),
                   Divider(height: 1),
                   ListTile(
-                      leading: Icon(Icons.payments),
-                      title: Text('Paid / Unpaid / Partial Report'),
-                      trailing: Icon(Icons.chevron_right)),
+                    dense: true,
+                    leading: Icon(Icons.payments),
+                    title: Text('Paid / Unpaid / Partial Report'),
+                    trailing: Icon(Icons.chevron_right),
+                  ),
                   Divider(height: 1),
                   ListTile(
-                      leading: Icon(Icons.person),
-                      title: Text('Vendor Wise Report'),
-                      trailing: Icon(Icons.chevron_right)),
+                    dense: true,
+                    leading: Icon(Icons.person),
+                    title: Text('Vendor Wise Report'),
+                    trailing: Icon(Icons.chevron_right),
+                  ),
                   Divider(height: 1),
                   ListTile(
-                      leading: Icon(Icons.account_balance),
-                      title: Text('Cash & Bank Report'),
-                      trailing: Icon(Icons.chevron_right)),
+                    dense: true,
+                    leading: Icon(Icons.account_balance),
+                    title: Text('Cash & Bank Report'),
+                    trailing: Icon(Icons.chevron_right),
+                  ),
                 ],
               ),
             ),
@@ -769,20 +943,25 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
               child: const Column(
                 children: [
                   ListTile(
-                      leading: Icon(Icons.category),
-                      title: Text('Main Expense Categories'),
-                      subtitle: Text('Search, add, edit and delete')),
+                    dense: true,
+                    leading: Icon(Icons.category),
+                    title: Text('Main Expense Categories'),
+                    subtitle: Text('Search, add, edit and delete'),
+                  ),
                   Divider(height: 1),
                   ListTile(
-                      leading: Icon(Icons.account_tree),
-                      title: Text('Expense Type Categories'),
-                      subtitle:
-                          Text('Manage categories under main categories')),
+                    dense: true,
+                    leading: Icon(Icons.account_tree),
+                    title: Text('Expense Type Categories'),
+                    subtitle: Text('Manage categories under main categories'),
+                  ),
                   Divider(height: 1),
                   ListTile(
-                      leading: Icon(Icons.list_alt),
-                      title: Text('Expense Types'),
-                      subtitle: Text('Manage types under type categories')),
+                    dense: true,
+                    leading: Icon(Icons.list_alt),
+                    title: Text('Expense Types'),
+                    subtitle: Text('Manage types under type categories'),
+                  ),
                 ],
               ),
             ),
@@ -790,6 +969,74 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
         ],
       ),
     );
+  }
+
+  void viewExpense(Map<String, dynamic> record) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Expense Details'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: record.entries.map((entry) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 7),
+                child: Text(
+                    '${entry.key.replaceAll('_', ' ')}: ${entry.value ?? '—'}'),
+              );
+            }).toList(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> deleteExpenseRecord(Map<String, dynamic> record) async {
+    final id = record['id'] as int?;
+    if (id == null) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Expense?'),
+        content: const Text('This expense record will be deleted. Continue?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await AppDatabase.instance.deleteExpense(id);
+      await loadExpenseHistory();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Expense deleted successfully.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to delete expense: $e')),
+      );
+    }
   }
 
   Widget historySection() {
@@ -869,16 +1116,46 @@ class _ExpenseManagementScreenState extends State<ExpenseManagementScreen> {
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       Text(status, style: const TextStyle(fontSize: 11)),
-                      InkWell(
-                        onTap: () => editExpense(record),
-                        child: const Text(
-                          'Edit',
-                          style: TextStyle(
-                            color: Color(0xFF173F73),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            tooltip: 'View',
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                              minWidth: 32,
+                              minHeight: 30,
+                            ),
+                            onPressed: () => viewExpense(record),
+                            icon:
+                                const Icon(Icons.visibility_outlined, size: 17),
                           ),
-                        ),
+                          IconButton(
+                            tooltip: 'Edit',
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                              minWidth: 32,
+                              minHeight: 30,
+                            ),
+                            onPressed: () => editExpense(record),
+                            icon: const Icon(Icons.edit,
+                                size: 17, color: Color(0xFF218838)),
+                          ),
+                          IconButton(
+                            tooltip: 'Delete',
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                              minWidth: 32,
+                              minHeight: 30,
+                            ),
+                            onPressed: () => deleteExpenseRecord(record),
+                            icon: const Icon(Icons.delete_outline,
+                                size: 17, color: Colors.red),
+                          ),
+                        ],
                       ),
                     ],
                   ),
