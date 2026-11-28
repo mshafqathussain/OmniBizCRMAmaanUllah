@@ -21,6 +21,20 @@ jobs:
       - name: Flutter dependencies
         run: flutter pub get
 
+      - name: Fix image_cropper Android compile SDK
+        run: |
+          PLUGIN_FILES="$(find "$HOME/.pub-cache/hosted/pub.dev" -path '*/image_cropper-*/android/build.gradle*' -type f)"
+          if [ -z "$PLUGIN_FILES" ]; then
+            echo "ERROR: image_cropper Gradle file not found"
+            exit 1
+          fi
+          while IFS= read -r file; do
+            sed -i -E 's/(compileSdkVersion[[:space:]]+)33/\1 36/; s/(compileSdk[[:space:]]*=[[:space:]]*)33/\1 36/' "$file"
+            echo "----- $file -----"
+            grep -n 'compileSdk' "$file"
+          done <<< "$PLUGIN_FILES"
+
+
       - name: Build Debug APK
         run: flutter build apk --debug
 

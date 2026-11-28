@@ -58,13 +58,16 @@ jobs:
 
       - name: Fix image_cropper Android compile SDK
         run: |
-          PLUGIN_GRADLE="$(find "$HOME/.pub-cache" -path '*/image_cropper-*/android/build.gradle*' -not -path '*/example/*' -type f | head -n 1)"
-          if [ -z "$PLUGIN_GRADLE" ]; then
-            echo "image_cropper Gradle file not found"
+          PLUGIN_FILES="$(find "$HOME/.pub-cache/hosted/pub.dev" -path '*/image_cropper-*/android/build.gradle*' -type f)"
+          if [ -z "$PLUGIN_FILES" ]; then
+            echo "ERROR: image_cropper Gradle file not found"
             exit 1
           fi
-          sed -i -E 's/compileSdkVersion[[:space:]]+33/compileSdkVersion 36/g; s/compileSdk[[:space:]]*=[[:space:]]*33/compileSdk = 36/g' "$PLUGIN_GRADLE"
-
+          while IFS= read -r file; do
+            sed -i -E 's/(compileSdkVersion[[:space:]]+)33/\1 36/; s/(compileSdk[[:space:]]*=[[:space:]]*)33/\1 36/' "$file"
+            echo "----- $file -----"
+            grep -n 'compileSdk' "$file"
+          done <<< "$PLUGIN_FILES"
       - name: Generate launcher icons
         run: dart run flutter_launcher_icons
 
